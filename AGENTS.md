@@ -1,12 +1,19 @@
-# Emerald PVP
+﻿# Emerald PVP
 
-- Fase actual: interfaz y arquitectura base. No integrar emulación, ROMs, BIOS, red ni backend sin una solicitud nueva.
-- HTML semántico en `public/index.html`; estilos en `public/style.css`; ES Modules vanilla en `public/js/`. Sin frameworks, bundler ni dependencias de producción.
-- `main.js` inicializa la interfaz y ofrece el punto de integración del motor. `controls.js` concentra teclado, Pointer Events, multitouch, estados visuales y eventos `emerald:input`.
-- Mantener exactamente un Canvas de 240 × 160. No crear su contexto hasta integrar el motor. No reemplazar nodos ni reconstruir el DOM al girar; el layout depende de la media query de orientación.
-- Las referencias visuales son `references/portrait.jpg` y `references/landscape.jpg`. Recrear carcasa y controles mediante CSS/SVG; no servir las referencias como fondos.
-- Mantener el estado por fuente de entrada para no soltar un botón que otra tecla o dedo sigue pulsando. Liberar entradas al perder foco, cambiar orientación o cancelar un puntero.
-- Respetar safe areas, relación 3:2 de la pantalla, accesibilidad, movimiento reducido y ausencia de scroll en juego.
-- Favorecer funciones pequeñas y responsabilidades concretas. Crear archivos nuevos solo por necesidad técnica. No añadir abstracciones para fases futuras.
-- `npm run dev` sirve exclusivamente `public/` con módulos nativos de Node. `npm run check` verifica sintaxis. Validar también ambas orientaciones y combinaciones de entrada en navegador al modificar controles o layout.
-- Netlify publica `public/` sin paso de build. No publicar ni modificar infraestructura externa sin que forme parte de la solicitud.
+- Fase actual: integración real de Dingbat (fase 2). No implementar PvP, multijugador, backend ni servicios externos sin una solicitud nueva. No hacer commits ni pushes automáticamente.
+- Conservar el diseño aprobado: geometría, materiales, colores, botones, bisagra, efectos y responsive de ambas consolas. Solo añadir acciones discretas de carga, guardados y configuración fuera de la carcasa. Referencias: `references/portrait.jpg` y `references/landscape.jpg`.
+- HTML semántico en `public/index.html`; CSS en `public/style.css`; JavaScript vanilla ES Modules en `public/js/`. Sin frameworks, bundler ni dependencias npm de producción.
+- `main.js` coordina UI, selectores de archivos y ciclo de vida. `controls.js` es el único sistema de teclado/Pointer Events/multitouch y emite `emerald:input`. No duplicar listeners de juego en el motor.
+- `emulator.js` encapsula Dingbat, MEMFS, vídeo, ritmo de frames, Web Audio y memoria de batería. `storage.js` se ocupa exclusivamente de IndexedDB y SHA-256. Funciones pequeñas; evitar abstraer fases futuras.
+- Mantener exactamente un Canvas con atributos 240 × 160 y proporción 3:2. No reconstruir nodos, redimensionar su buffer ni reiniciar el motor al girar. El layout lo decide CSS. Liberar las entradas al girar, sin pausar el núcleo.
+- Mantener el estado de entrada por fuente. No liberar un botón mientras otra tecla o dedo lo sostiene. Cancelación, foco, diálogos y visibilidad deben liberar las entradas. Las activaciones accesibles deben durar al menos un frame emulado.
+- Dingbat fijado en `91709f81223ee6a8be61e251466a7d748141d458`. `public/core/em.js` y `em.wasm` son artefactos oficiales sin modificar. Conservar licencias, avisos y hashes de `public/core/README.md`; verificar procedencia y adaptar pruebas si se actualiza el motor.
+- El script oficial es clásico y define `Module`/`FS`; limitar su uso a `emulator.js`. No importar el frontend, service worker, sincronización, núcleo DS ni señalización de Dingbat.
+- No incorporar ROMs comerciales ni BIOS propietarios. La ROM seleccionada permanece en MEMFS. Solo se guardan partidas en IndexedDB, identificadas por SHA-256 del contenido de la ROM.
+- Verificar integridad del `.sav`; esperar el commit de su transacción. Un guardado corrupto se preserva y se protege del autoguardado; permitir recuperación mediante importación explícita. No confundir memoria de batería con estados instantáneos.
+- Audio desde gesto del usuario, PCM estéreo a 32768 Hz, cola limitada. Pausar CPU y audio al perder foco/visibilidad. Respetar safe areas, movimiento reducido y ausencia de scroll durante el juego.
+- Node y npm ya existen. Comprobar primero PATH y las instalaciones conocidas; en este equipo están en `E:\tools\node-v24.22.3-win-x64`. Se puede ajustar PATH solo para el proceso. No descargar/reinstalar Node ni crear runtimes adicionales. No cambiar configuraciones globales.
+- No instalar herramientas sin explicar su necesidad y pedir autorización. Compiladores, si se autorizan, preferentemente en el disco actual y fuera del repositorio. Los artefactos oficiales actuales evitan instalar Nim/Emscripten. No instalar Azure, Docker ni Cloudflare.
+- `npm run dev` sirve `public/` sin dependencias; `npm run check` valida sintaxis; `npm test` usa `node:test`. Mantener las pruebas de motor, guardados y servidor. Al modificar entradas/loop/persistencia, verificar además en navegador con una ROM de prueba legal y registrar qué se ejecutó realmente.
+- Netlify publica `public/` sin build. Mantener MIME `application/wasm` y CSP compatible con WASM en Netlify y servidor local. SHA-256 necesita HTTPS o localhost. No desplegar infraestructura externa salvo solicitud.
+- `artifacts/` contiene evidencia y archivos temporales locales, ignorados por Git. No incorporar herramientas, perfiles de navegador ni checkouts de terceros al repositorio publicado. Documentar límites reales y pruebas pendientes; no declarar Pokémon Esmeralda probado sin ejecutarlo.
