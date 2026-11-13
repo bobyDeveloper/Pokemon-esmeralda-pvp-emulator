@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#101016">
+    <meta name="description" content="Emerald PVP. Una consola de bolsillo, dos formas de jugar. Interfaz adaptable inspirada en Game Boy Advance.">
+    <title>Emerald PVP · La consola</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2385e5b5' d='m16 2 13 10-13 18L3 12Z'/%3E%3Cpath fill='%233b9276' d='M3 12h26L16 30Z'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/style.css">
+    <script type="module" src="/js/main.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="wordmark" href="./" aria-label="Emerald PVP, inicio">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 7-9 13L3 9Z"/><path d="M3 9h18M8 9l4 13 4-13-4-7Z"/></svg>
+        <span>EMERALD <b>PVP</b></span>
+      </a>
+      <span class="edition">POCKET CONSOLE <span>／</span> 01</span>
+      <button class="help-toggle" type="button" aria-label="Abrir guía de controles" aria-haspopup="dialog" aria-controls="controls-help">?</button>
+    </header>
+
+    <main class="stage" aria-label="Consola Emerald PVP">
+      <div class="console" id="console" role="group" aria-label="Game Boy Advance, controles de juego">
+        <div class="shell shell--lid" aria-hidden="true"></div>
+        <div class="shell shell--base" aria-hidden="true"></div>
+        <div class="hinge" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="lid-details" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <span class="shell-brand" aria-hidden="true">EMERALD <b>PVP</b></span>
+        <span class="screw" aria-hidden="true"><span>✦</span></span>
+
+        <section class="display-assembly" aria-label="Pantalla">
+          <div class="screen">
+            <canvas id="game-screen" width="240" height="160" aria-label="Pantalla de juego de 240 por 160 píxeles. Motor todavía no conectado.">Tu navegador necesita soporte de Canvas para mostrar la pantalla de juego.</canvas>
+            <div class="standby" id="standby">
+              <span class="screen-kicker">POCKET BATTLE SYSTEM</span>
+              <svg class="emerald" viewBox="0 0 60 56" aria-hidden="true">
+                <path fill="#b7f5d6" d="M17 3h26l14 17-27 33L3 20Z"/>
+                <path fill="#6dd7a5" d="m17 3 5 17H3Z"/>
+                <path fill="#93e9bc" d="m17 3 13 0-8 17Z"/>
+                <path fill="#d5ffe8" d="m30 3 8 17H22Z"/>
+                <path fill="#5ccf9c" d="m30 3 13 0-5 17Z"/>
+                <path fill="#8de6b8" d="m43 3 14 17H38Z"/>
+                <path fill="#349d7a" d="m3 20 27 33-8-33Z"/>
+                <path fill="#69d5a4" d="m22 20 8 33 8-33Z"/>
+                <path fill="#247b63" d="M38 20h19L30 53Z"/>
+                <path fill="none" stroke="#e0ffec" stroke-opacity=".4" d="M3 20h54M17 3l5 17 8 33 8-33 5-17"/>
+              </svg>
+              <h1>EMERALD<span>P V P</span></h1>
+              <p class="standby-caption">Tu próxima aventura empieza aquí.</p>
+              <span class="standby-status"><i></i> EN ESPERA</span>
+            </div>
+          </div>
+          <div class="bezel-label" aria-hidden="true"><span>EMERALD SYSTEM</span><b>GAME BOY <em>ADVANCE</em><small>SP</small></b><span>AGS · 001</span></div>
+        </section>
+
+        <div class="power-indicator" aria-label="Interfaz encendida"><i></i><span>POWER</span><i class="charge-light"></i></div>
+
+        <button class="control shoulder shoulder--l" data-button="L" type="button" aria-label="L, tecla Q" aria-pressed="false">
+          <svg viewBox="0 0 180 90" preserveAspectRatio="none" aria-hidden="true"><use href="#shoulder-shape"/></svg><span>L</span>
+        </button>
+        <button class="control shoulder shoulder--r" data-button="R" type="button" aria-label="R, tecla E" aria-pressed="false">
+          <svg viewBox="0 0 180 90" preserveAspectRatio="none" aria-hidden="true"><use href="#shoulder-shape"/></svg><span>R</span>
+        </button>
+
+        <div class="dpad-well" aria-hidden="true"></div>
+        <div class="dpad" role="group" aria-label="Cruceta direccional">
+          <svg class="dpad-face" viewBox="0 0 200 200" aria-hidden="true">
+            <path class="dpad-outline" d="M77 6h46q7 0 7 7v57h57q7 0 7 7v46q0 7-7 7h-57v57q0 7-7 7H77q-7 0-7-7v-57H13q-7 0-7-7V77q0-7 7-7h57V13q0-7 7-7Z"/>
+            <path class="dpad-inner" d="M77 6h46q7 0 7 7v57h57q7 0 7 7v46q0 7-7 7h-57v57q0 7-7 7H77q-7 0-7-7v-57H13q-7 0-7-7V77q0-7 7-7h57V13q0-7 7-7Z"/>
+            <path class="arrow arrow--up" d="m100 26 14 23q2 4-2 4H88q-4 0-2-4Z"/>
+            <path class="arrow arrow--right" d="m174 100-23 14q-4 2-4-2V88q0-4 4-2Z"/>
+            <path class="arrow arrow--down" d="m100 174-14-23q-2-4 2-4h24q4 0 2 4Z"/>
+            <path class="arrow arrow--left" d="m26 100 23-14q4-2 4 2v24q0 4-4 2Z"/>
+            <circle cx="100" cy="100" r="22" fill="url(#pivot-plastic)"/>
+          </svg>
+          <button class="control direction direction--up" data-button="UP" type="button" aria-label="Arriba, flecha arriba o W" aria-pressed="false"></button>
+          <button class="control direction direction--right" data-button="RIGHT" type="button" aria-label="Derecha, flecha derecha o D" aria-pressed="false"></button>
+          <button class="control direction direction--down" data-button="DOWN" type="button" aria-label="Abajo, flecha abajo o S" aria-pressed="false"></button>
+          <button class="control direction direction--left" data-button="LEFT" type="button" aria-label="Izquierda, flecha izquierda o A" aria-pressed="false"></button>
+        </div>
+
+        <div class="action-well" aria-hidden="true"></div>
+        <button class="control action action--a" data-button="A" type="button" aria-label="A, tecla X o K" aria-pressed="false"><span>A</span></button>
+        <button class="control action action--b" data-button="B" type="button" aria-label="B, tecla Z o J" aria-pressed="false"><span>B</span></button>
+
+        <div class="speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <button class="control utility utility--select" data-button="SELECT" type="button" aria-label="Select, Mayúsculas o Retroceso" aria-pressed="false"><span>SELECT</span><i></i></button>
+        <button class="control utility utility--start" data-button="START" type="button" aria-label="Start, Intro" aria-pressed="false"><span>START</span><i></i></button>
+        <span class="model-stamp" aria-hidden="true">AGS–001 <i>●</i> INDIGO EDITION</span>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <span class="layout-label"><i></i><span id="model-label">ADVANCE SP</span></span>
+      <output id="input-status">CONTROLES LISTOS</output>
+      <span class="phase-label">INTERFAZ <span>／</span> FASE 01</span>
+    </footer>
+
+    <dialog class="controls-help" id="controls-help" aria-labelledby="help-title">
+      <form method="dialog"><button class="dialog-close" aria-label="Cerrar guía" autofocus>×</button></form>
+      <span class="dialog-kicker">EMERALD PVP · FASE 01</span>
+      <h2 id="help-title">Todo bajo control.</h2>
+      <p>Toca los botones o usa tu teclado. Puedes mantener varios controles pulsados a la vez.</p>
+      <dl class="key-guide">
+        <div><dt>Cruceta</dt><dd><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd><span>o WASD</span></dd></div>
+        <div><dt>A / B</dt><dd><kbd>X</kbd><kbd>Z</kbd><span>o K / J</span></dd></div>
+        <div><dt>L / R</dt><dd><kbd>Q</kbd><kbd>E</kbd></dd></div>
+        <div><dt>Start</dt><dd><kbd>Intro</kbd></dd></div>
+        <div><dt>Select</dt><dd><kbd>Mayús</kbd><span>o Retroceso</span></dd></div>
+      </dl>
+      <p class="help-note">Gira tu dispositivo para cambiar de consola. El motor de juego se integrará en una próxima fase.</p>
+    </dialog>
+
+    <svg class="svg-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="button-plastic" x1="0" y1="0" x2=".25" y2="1"><stop stop-color="#faf9ff"/><stop offset=".12" stop-color="#e3e2eb"/><stop offset=".7" stop-color="#cbcbd5"/><stop offset="1" stop-color="#b6b6c2"/></linearGradient>
+        <radialGradient id="pivot-plastic" cx=".42" cy=".8" r=".7"><stop stop-color="#efeff6"/><stop offset=".5" stop-color="#c4c4cf"/><stop offset="1" stop-color="#a6a6b5"/></radialGradient>
+        <g id="shoulder-shape"><path d="M31 5h119c16 0 25 11 25 25s-12 22-29 22c-44-4-65-3-111 27C17 89 5 89 5 67V34Q5 5 31 5Z" fill="url(#button-plastic)" stroke="#161122" stroke-width="5"/><path d="M31 9h119c14 0 21 9 21 21s-10 18-25 18c-44-4-67-2-113 27-16 10-24 9-24-8V34Q9 9 31 9Z" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2"/></g>
+      </defs>
+    </svg>
+  </body>
+</html>

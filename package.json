@@ -1,0 +1,12 @@
+{
+  "name": "emerald-pvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interfaz adaptable de Game Boy Advance y Advance SP. Fase 1 de Emerald PVP.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "check": "node --check public/js/main.js && node --check public/js/controls.js && node --check scripts/dev.mjs"
+  }
+}
