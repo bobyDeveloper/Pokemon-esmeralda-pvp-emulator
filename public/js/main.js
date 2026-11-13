@@ -1,6 +1,7 @@
 import { createControls } from './controls.js';
 import { createEmulator } from './emulator.js';
 import { saveStorage } from './storage.js';
+import { Multiplayer } from './multiplayer.js';
 
 const consoleElement = document.querySelector('#console');
 const canvas = document.querySelector('#game-screen');
@@ -9,6 +10,7 @@ const inputStatus = document.querySelector('#input-status');
 const modelLabel = document.querySelector('#model-label');
 const helpDialog = document.querySelector('#controls-help');
 const sessionDialog = document.querySelector('#session-panel');
+const roomsDialog = document.querySelector('#rooms-panel');
 const orientation = window.matchMedia('(orientation: landscape)');
 const romInput = document.querySelector('#rom-file');
 const saveInput = document.querySelector('#save-file');
@@ -80,7 +82,7 @@ function openDialog(dialog) {
 document.querySelector('.help-toggle').addEventListener('click', () => openDialog(helpDialog));
 document.querySelector('#session-toggle').addEventListener('click', () => openDialog(sessionDialog));
 
-for (const dialog of [helpDialog, sessionDialog]) {
+for (const dialog of [helpDialog, sessionDialog, roomsDialog]) {
   dialog.addEventListener('click', event => {
     const bounds = dialog.getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right
@@ -178,4 +180,49 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { controls.releaseAll(); emulator.pause(); }
 });
 
-export { canvas, consoleElement, controls, standby, emulator };
+const multiplayer = new Multiplayer();
+let roomBusy = false;
+function updateRoom(state = multiplayer.getState()) {
+  const room = state.room;
+  document.querySelector('#room-entry').hidden = Boolean(room);
+  document.querySelector('#current-room').hidden = !room;
+  document.querySelector('#room-code').textContent = room?.code ?? '';
+  document.querySelector('#room-members').textContent = room ? `${room.role === 'host' ? 'Host' : 'Invitado'} · ${room.players}/2 personas` : '';
+  document.querySelector('#close-room').hidden = room?.role !== 'host';
+  document.querySelector('#open-room').textContent = room ? `Sala · ${room.players}/2` : 'Salas';
+  document.querySelector('#room-status').textContent = state.notice || {
+    disconnected: 'Crea una sala o introduce un código para conectarte.',
+    connecting: 'Conectando con el servidor de salas…',
+    reconnecting: 'Reconectando. Las salas anteriores no se recuperan automáticamente.',
+    connected: room ? (room.players === 2 ? 'Las dos personas están conectadas a la sala.' : 'Comparte tu código para invitar a otra persona.') : 'Conexión disponible. Crea una sala o introduce un código.',
+  }[state.connection];
+  for (const button of roomsDialog.querySelectorAll('button:not(.dialog-close)')) button.disabled = roomBusy;
+}
+multiplayer.addEventListener('statechange', ({ detail }) => updateRoom(detail));
+document.querySelector('#open-room').addEventListener('click', () => {
+  sessionDialog.close();
+  openDialog(roomsDialog);
+  updateRoom();
+});
+async function roomAction(action) {
+  if (roomBusy) return;
+  roomBusy = true;
+  updateRoom();
+  try { await action(); }
+  catch (error) { document.querySelector('#room-status').textContent = error.message; }
+  finally {
+    roomBusy = false;
+    for (const button of roomsDialog.querySelectorAll('button:not(.dialog-close)')) button.disabled = false;
+  }
+}
+document.querySelector('#create-room').addEventListener('click', () => roomAction(() => multiplayer.createRoom()));
+document.querySelector('#join-room').addEventListener('submit', event => {
+  event.preventDefault();
+  roomAction(() => multiplayer.joinRoom(document.querySelector('#room-code-input').value));
+});
+document.querySelector('#leave-room').addEventListener('click', () => roomAction(() => multiplayer.leaveRoom()));
+document.querySelector('#close-room').addEventListener('click', () => roomAction(() => multiplayer.closeRoom()));
+window.addEventListener('pagehide', () => multiplayer.disconnect());
+updateRoom();
+
+export { canvas, consoleElement, controls, standby, emulator, multiplayer };

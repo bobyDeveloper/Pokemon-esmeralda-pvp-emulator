@@ -130,11 +130,32 @@
         <button type="button" id="reset-game" disabled>Reiniciar</button>
         <button type="button" id="import-save" disabled>Importar .sav</button>
         <button type="button" id="export-save" disabled>Exportar .sav</button>
+        <button type="button" id="open-room" class="room-opener">Salas</button>
       </div>
       <label class="sound-option"><input type="checkbox" id="sound-enabled" checked> Sonido activado</label>
       <p class="save-status" id="save-status">Las partidas se guardan automáticamente en este navegador.</p>
       <p class="help-note">La ROM y las partidas permanecen en tu dispositivo. Importa partidas del juego cargado y exporta copias para conservarlas fuera del navegador.</p>
       <a class="core-credits" href="/core/README.md" target="_blank" rel="noopener">Dingbat · Matthew Beck · Licencia MIT ↗</a>
+    </dialog>
+
+    <dialog class="controls-help rooms-panel" id="rooms-panel" aria-labelledby="rooms-title">
+      <form method="dialog"><button class="dialog-close" aria-label="Cerrar panel de salas" autofocus>×</button></form>
+      <span class="dialog-kicker">EMERALD PVP · SALAS</span>
+      <h2 id="rooms-title">Comparte una sala.</h2>
+      <p id="room-status" role="status" aria-live="polite">Crea una sala o introduce un código para conectarte.</p>
+      <div id="room-entry">
+        <div class="session-grid"><button type="button" id="create-room" class="room-opener">Crear sala</button></div>
+        <form id="join-room" class="join-room">
+          <label for="room-code-input">Código de invitación</label>
+          <div><input id="room-code-input" name="code" placeholder="XXXXXXXXXX" minlength="10" maxlength="10" pattern="[A-HJ-NP-Za-hj-np-z2-9]{10}" required autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="room-note"><button type="submit">Unirse</button></div>
+        </form>
+      </div>
+      <section id="current-room" hidden aria-label="Sala actual">
+        <output id="room-code" class="room-code" aria-label="Código de invitación"></output>
+        <p id="room-members"></p>
+        <div class="session-grid"><button type="button" id="leave-room">Abandonar</button><button type="button" id="close-room">Cerrar sala</button></div>
+      </section>
+      <p class="help-note" id="room-note">La sala admite dos personas. Por ahora, el juego continúa en modo individual; la conexión entre juegos todavía no está disponible.</p>
     </dialog>
 
     <input id="rom-file" type="file" accept=".gba,application/octet-stream" hidden>

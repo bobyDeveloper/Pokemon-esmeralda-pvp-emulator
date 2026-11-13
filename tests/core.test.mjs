@@ -32,7 +32,11 @@ test('official Dingbat artifacts match their published SHA-256 hashes', async ()
     'em.js': 'd53bf029c62b57309ef5caa202953f74af7590d5713a2834811e8d14652726da',
     'em.wasm': '1525942f460c63707bc2f6565007bbb131b94ef4895a1fc2d6b936e555b43268',
   })) {
-    assert.equal(createHash('sha256').update(await read(`public/core/${name}`)).digest('hex'), hash);
+    const bytes = await read(`public/core/${name}`);
+    // Git on Windows can translate the JS's final LF to CRLF on checkout.
+    // Verify the canonical upstream text without rewriting the engine file.
+    const canonical = name.endsWith('.js') ? bytes.toString('utf8').replaceAll('\r\n', '\n') : bytes;
+    assert.equal(createHash('sha256').update(canonical).digest('hex'), hash);
   }
 });
 

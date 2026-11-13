@@ -2,12 +2,22 @@
   "name": "emerald-pvp",
   "version": "0.1.0",
   "private": true,
-  "description": "Consola GBA adaptable con Dingbat WebAssembly y guardados locales. Fase 2 de Emerald PVP.",
+  "description": "Consola GBA con Dingbat, guardados locales y salas de señalización WebSocket.",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "check": "node --check public/js/main.js && node --check public/js/controls.js && node --check public/js/emulator.js && node --check public/js/storage.js && node --check scripts/dev.mjs",
-    "test": "node --test tests/core.test.mjs"
+    "dev:online": "netlify dev",
+    "check": "node --check public/js/main.js && node --check public/js/controls.js && node --check public/js/emulator.js && node --check public/js/storage.js && node --check public/js/multiplayer.js && node --check netlify/server/index.mjs && node --check netlify/server/rooms.mjs && node --check scripts/dev.mjs",
+    "test": "node --test tests/core.test.mjs tests/rooms.test.mjs",
+    "test:online": "node --test tests/multiplayer.integration.test.mjs"
+  },
+  "dependencies": {
+    "@netlify/server": "0.1.6"
+  },
+  "devDependencies": {
+    "netlify-cli": "27.19.0"
   }
 }
