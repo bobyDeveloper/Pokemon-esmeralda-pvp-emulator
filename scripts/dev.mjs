@@ -10,6 +10,8 @@ const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.md': 'text/plain; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -42,6 +44,7 @@ const server = createServer(async (request, response) => {
       'Content-Length': body.length,
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     });
     response.end(request.method === 'HEAD' ? undefined : body);
   } catch (error) {
@@ -57,6 +60,6 @@ server.on('error', error => {
 });
 
 server.listen(port, host, () => {
-  console.log(`Emerald PVP · http://${host}:${port}`);
+  console.log(`Emerald PVP · http://${host}:${server.address().port}`);
   console.log('Ctrl+C para detener. Sin dependencias ni compilación.');
 });

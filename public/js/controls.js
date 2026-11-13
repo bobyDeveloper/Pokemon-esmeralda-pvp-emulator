@@ -17,6 +17,7 @@ export function createControls(root) {
   );
   const sources = new Map();
   const pointers = new Set();
+  const accessibleTimers = new Set();
   const pressed = new Set();
   const abortController = new AbortController();
   const { signal } = abortController;
@@ -53,6 +54,8 @@ export function createControls(root) {
   }
 
   function releaseAll() {
+    for (const timer of accessibleTimers) clearTimeout(timer);
+    accessibleTimers.clear();
     sources.clear();
     for (const pointerId of [...pointers]) releasePointer(pointerId);
     for (const button of [...pressed]) updateButton(button);
@@ -86,7 +89,9 @@ export function createControls(root) {
 
   function inputIsBlocked(event) {
     return event.ctrlKey || event.metaKey || event.altKey
-      || event.target?.closest('input, textarea, select, [contenteditable="true"], dialog[open], button:not([data-button]), a')
+      || event.target?.closest('input, textarea, select, [contenteditable="true"], dialog[open]')
+      || (['Enter', 'NumpadEnter', 'Space'].includes(event.code)
+        && event.target?.closest('button:not([data-button]), a'))
       || document.querySelector('dialog[open]');
   }
 
@@ -114,7 +119,12 @@ export function createControls(root) {
     if (!element || event.detail !== 0 || pressed.has(element.dataset.button)) return;
     const source = `accessible:${element.dataset.button}`;
     setSource(source, element.dataset.button);
-    queueMicrotask(() => setSource(source));
+    // Synthesized activation must last long enough for a real GBA frame.
+    const timer = setTimeout(() => {
+      accessibleTimers.delete(timer);
+      setSource(source);
+    }, 80);
+    accessibleTimers.add(timer);
   }, { signal });
 
   root.addEventListener('contextmenu', event => event.preventDefault(), { signal });

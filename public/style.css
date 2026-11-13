@@ -351,3 +351,32 @@ kbd { display: inline-grid; place-items: center; min-width: 23px; height: 23px; 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Phase 2 chrome only. The physical console rules above remain unchanged. */
+.session-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
+.session-actions button { height: 30px; border: 1px solid #46404f; background: #ffffff03; color: #aaa4b7; border-radius: 6px; }
+.load-rom-button { display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; font-size: 10px; white-space: nowrap; }
+.load-rom-button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.session-toggle { width: 30px; font-size: 19px; font-weight: 700; line-height: 1; }
+.session-actions button:hover { background: #ffffff0a; border-color: #8c819f; }
+.session-panel .rom-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c5d7c9; }
+.session-panel .session-status { font-size: 11px; color: #8f869e; margin-top: 3px; }
+.session-panel .session-message { margin-top: 12px; padding: 10px; border: 1px solid #6b5c78; border-radius: 6px; font-size: 11px; color: #ded1e5; }
+.session-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 23px 0 18px; }
+.session-grid button { min-height: 42px; border: 1px solid #53485f; border-radius: 7px; background: #ffffff05; color: #d0cbd9; font-size: 12px; }
+.session-grid button:enabled:hover { background: #ffffff0d; }
+.session-actions button:disabled, .session-grid button:disabled { opacity: .4; cursor: default; }
+.sound-option { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #c9c2d3; }
+.sound-option input { accent-color: #94d6b2; width: 16px; height: 16px; }
+.session-panel .save-status { font-size: 10px; margin: 16px 0; color: #99b5a3; }
+.core-credits { display: inline-block; font-size: 10px; color: #8c809e; margin-top: 20px; text-underline-offset: 3px; }
+.notification { position: fixed; top: max(58px, calc(env(safe-area-inset-top) + 45px)); left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: flex-start; gap: 12px; width: min(440px, calc(100% - 32px)); padding: 13px 12px 13px 16px; border: 1px solid #6b5c78; border-radius: 10px; background: #27212ff5; box-shadow: 0 8px 30px #0006; }
+.notification p { margin: 0; flex: 1; font-size: 12px; line-height: 1.6; color: #e0d8e8; }
+.notification button { background: transparent; color: #bdb6c9; border: 0; font-size: 20px; width: 24px; height: 24px; flex-shrink: 0; }
+@media (max-width: 380px) {
+  .load-rom-button > span { display: none; }
+  .load-rom-button { width: 30px; padding: 0; justify-content: center; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .session-actions button { height: 25px; }
+}

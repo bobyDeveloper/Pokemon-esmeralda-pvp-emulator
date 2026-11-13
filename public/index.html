@@ -16,7 +16,13 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 7-9 13L3 9Z"/><path d="M3 9h18M8 9l4 13 4-13-4-7Z"/></svg>
         <span>EMERALD <b>PVP</b></span>
       </a>
-      <span class="edition">POCKET CONSOLE <span>／</span> 01</span>
+      <span class="edition">POCKET CONSOLE <span>／</span> 02</span>
+      <div class="session-actions" aria-label="Acciones del juego">
+        <button class="load-rom-button" id="load-rom" type="button" aria-label="Cargar ROM GBA local">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6l2 3h8v12H4ZM4 12h16M12 11v6m-3-3 3 3 3-3"/></svg><span>Cargar ROM</span>
+        </button>
+        <button class="session-toggle" id="session-toggle" type="button" aria-label="Abrir opciones del juego" aria-haspopup="dialog" aria-controls="session-panel">···</button>
+      </div>
       <button class="help-toggle" type="button" aria-label="Abrir guía de controles" aria-haspopup="dialog" aria-controls="controls-help">?</button>
     </header>
 
@@ -31,7 +37,7 @@
 
         <section class="display-assembly" aria-label="Pantalla">
           <div class="screen">
-            <canvas id="game-screen" width="240" height="160" aria-label="Pantalla de juego de 240 por 160 píxeles. Motor todavía no conectado.">Tu navegador necesita soporte de Canvas para mostrar la pantalla de juego.</canvas>
+            <canvas id="game-screen" width="240" height="160" aria-label="Pantalla de juego GBA, 240 por 160 píxeles.">Tu navegador necesita soporte de Canvas para mostrar la pantalla de juego.</canvas>
             <div class="standby" id="standby">
               <span class="screen-kicker">POCKET BATTLE SYSTEM</span>
               <svg class="emerald" viewBox="0 0 60 56" aria-hidden="true">
@@ -47,7 +53,7 @@
                 <path fill="none" stroke="#e0ffec" stroke-opacity=".4" d="M3 20h54M17 3l5 17 8 33 8-33 5-17"/>
               </svg>
               <h1>EMERALD<span>P V P</span></h1>
-              <p class="standby-caption">Tu próxima aventura empieza aquí.</p>
+              <p class="standby-caption">Carga una ROM .gba para comenzar.</p>
               <span class="standby-status"><i></i> EN ESPERA</span>
             </div>
           </div>
@@ -94,12 +100,12 @@
     <footer class="app-footer">
       <span class="layout-label"><i></i><span id="model-label">ADVANCE SP</span></span>
       <output id="input-status">CONTROLES LISTOS</output>
-      <span class="phase-label">INTERFAZ <span>／</span> FASE 01</span>
+      <span class="phase-label">DINGBAT <span>／</span> FASE 02</span>
     </footer>
 
     <dialog class="controls-help" id="controls-help" aria-labelledby="help-title">
       <form method="dialog"><button class="dialog-close" aria-label="Cerrar guía" autofocus>×</button></form>
-      <span class="dialog-kicker">EMERALD PVP · FASE 01</span>
+      <span class="dialog-kicker">EMERALD PVP · FASE 02</span>
       <h2 id="help-title">Todo bajo control.</h2>
       <p>Toca los botones o usa tu teclado. Puedes mantener varios controles pulsados a la vez.</p>
       <dl class="key-guide">
@@ -109,8 +115,34 @@
         <div><dt>Start</dt><dd><kbd>Intro</kbd></dd></div>
         <div><dt>Select</dt><dd><kbd>Mayús</kbd><span>o Retroceso</span></dd></div>
       </dl>
-      <p class="help-note">Gira tu dispositivo para cambiar de consola. El motor de juego se integrará en una próxima fase.</p>
+      <p class="help-note">Gira tu dispositivo para cambiar de consola sin reiniciar el juego. Carga tu ROM desde la barra superior y gestiona el juego y las partidas en ···.</p>
     </dialog>
+
+    <dialog class="controls-help session-panel" id="session-panel" aria-labelledby="session-title">
+      <form method="dialog"><button class="dialog-close" aria-label="Cerrar opciones" autofocus>×</button></form>
+      <span class="dialog-kicker">EMERALD PVP · DINGBAT</span>
+      <h2 id="session-title">Tu partida.</h2>
+      <p class="rom-name" id="rom-name">Ninguna ROM cargada</p>
+      <p class="session-status" id="session-status" role="status">Carga una ROM .gba para comenzar.</p>
+      <p class="session-message" id="session-message" role="status" hidden></p>
+      <div class="session-grid">
+        <button type="button" id="pause-game" disabled>Pausar</button>
+        <button type="button" id="reset-game" disabled>Reiniciar</button>
+        <button type="button" id="import-save" disabled>Importar .sav</button>
+        <button type="button" id="export-save" disabled>Exportar .sav</button>
+      </div>
+      <label class="sound-option"><input type="checkbox" id="sound-enabled" checked> Sonido activado</label>
+      <p class="save-status" id="save-status">Las partidas se guardan automáticamente en este navegador.</p>
+      <p class="help-note">La ROM y las partidas permanecen en tu dispositivo. Importa partidas del juego cargado y exporta copias para conservarlas fuera del navegador.</p>
+      <a class="core-credits" href="/core/README.md" target="_blank" rel="noopener">Dingbat · Matthew Beck · Licencia MIT ↗</a>
+    </dialog>
+
+    <input id="rom-file" type="file" accept=".gba,application/octet-stream" hidden>
+    <input id="save-file" type="file" accept=".sav,application/octet-stream" hidden>
+    <aside class="notification" id="notification" hidden aria-label="Aviso">
+      <p id="notification-message" role="status" aria-live="polite"></p>
+      <button type="button" id="dismiss-notification" aria-label="Cerrar aviso">×</button>
+    </aside>
 
     <svg class="svg-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
