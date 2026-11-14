@@ -67,10 +67,15 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
   let muted = false;
   let audioTime = 0;
   let destroyed = false;
+  let linkPending = false;
+  let resumeAfterLinkCancel = false;
+  let netLink = null;
+  let pumping = false;
+  let speed = 1;
   const sources = new Set();
   const heldButtons = new Set();
 
-  const getState = () => ({ status, romName, romId, savedAt, persistence, muted, audio: audioContext?.state ?? 'locked' });
+  const getState = () => ({ status, romName, romId, savedAt, persistence, muted, speed, audio: audioContext?.state ?? 'locked', linkPending, link: netLink?.state ?? 'inactive' });
   const notify = () => onStateChange(getState());
 
   function releaseButtons() {
@@ -117,7 +122,7 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
     const length = module._getAudioBufferLen();
     if (!length) return;
     try {
-      if (!audioContext || audioContext.state !== 'running' || muted) return;
+      if (!audioContext || audioContext.state !== 'running' || muted || speed !== 1) return;
       const now = audioContext.currentTime;
       // Bound queued sound after a slow frame or a backgrounded browser.
       if (audioTime > now + 0.1) return;
@@ -153,6 +158,7 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
 
   function fail(error) {
     cancelAnimationFrame(animationFrame);
+    stopLink('core-error', error.message);
     releaseButtons();
     clearAudio();
     status = 'error';
@@ -160,22 +166,159 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
     onError(new Error('El motor se detuvo. Exporta tu partida si está disponible y recarga la página.', { cause: error }));
   }
 
+  function updateLinkState(state) {
+    if (!netLink || netLink.state === state) return;
+    netLink.state = state;
+    notify();
+  }
+
+  function drainLink(session = netLink) {
+    if (!session) return;
+    // Bounded even if a broken transport or core keeps generating output.
+    for (let count = 0; count < 32; count++) {
+      const length = module._netlink_drain(session.pointer, 16384);
+      if (!length) return;
+      if (length < 0 || length > 16384) throw new Error('Longitud de salida Link inválida.');
+      const bytes = new Uint8Array(module.memory.buffer, session.pointer, length).slice();
+      session.onBytes(bytes);
+      if (netLink !== session) return;
+    }
+    throw new Error('El núcleo generó demasiados paquetes Link en un solo turno.');
+  }
+
+  function pump() {
+    if (pumping || status !== 'running' || destroyed) return;
+    pumping = true;
+    try {
+      let completed = 0;
+      while (accumulator >= FRAME_TIME && completed < 4) {
+        if (netLink) {
+          const result = module._netlink_tick();
+          drainLink();
+          if (result === 3) {
+            const message = module.UTF8ToString(module._netlink_error_msg());
+            stopLink('core-error', message || 'Error del núcleo Link.');
+            break;
+          }
+          if (module._netlink_peer_done()) { stopLink('peer-left', 'Rival desconectado.'); break; }
+          if (result === 4) { stopLink('core-error', 'El núcleo Link se desactivó inesperadamente.'); break; }
+          if (result !== 1) {
+            updateLinkState(result === 0 ? 'handshake' : 'waiting');
+            break; // Preserve the frame debt. Never spin or emulate past a stall.
+          }
+          updateLinkState('connected');
+        } else module._loop_tick();
+        pushAudio();
+        accumulator -= FRAME_TIME;
+        completed++;
+      }
+      if (completed) render();
+    } catch (error) {
+      if (netLink) stopLink('core-error', error.message);
+      else throw error;
+    } finally { pumping = false; }
+  }
+
   function tick(time) {
     if (status !== 'running' || destroyed) return;
     try {
       if (lastTime === null) lastTime = time - FRAME_TIME;
-      accumulator = Math.min(accumulator + time - lastTime, FRAME_TIME * 4);
+      accumulator = Math.min(accumulator + (time - lastTime) * speed, FRAME_TIME * 4);
       lastTime = time;
-      while (accumulator >= FRAME_TIME) {
-        module._loop_tick();
-        pushAudio();
-        accumulator -= FRAME_TIME;
-      }
-      render();
+      pump();
       animationFrame = requestAnimationFrame(tick);
     } catch (error) {
       fail(error);
     }
+  }
+
+  function assertGameMutable() {
+    if (netLink || linkPending) throw new Error('Desconecta el cable Link antes de cambiar la ROM, reiniciar o importar una partida.');
+  }
+
+  function reserveLink() {
+    if (!romId || !['running', 'paused'].includes(status) || saveNeedsRecovery || destroyed) {
+      throw new Error('Carga una ROM y una partida válidas antes de conectar el cable Link.');
+    }
+    if (netLink) throw new Error('El cable Link ya está conectado.');
+    if (linkPending) return;
+    setSpeed(1);
+    resumeAfterLinkCancel = status === 'running';
+    linkPending = true;
+    pause(); // Keep the game's own cable handshake from timing out during ICE.
+    notify();
+  }
+
+  function startLink({ isHost, onBytes, onEnd }) {
+    reserveLink();
+    const pointer = module._malloc(16384);
+    if (!pointer) { linkPending = false; notify(); throw new Error('No hay memoria para el transporte Link.'); }
+    try {
+      module._netlink_set_speculative(0);
+      if (module._netlink_attach(isHost ? 1 : 0, 0) !== 1) throw new Error('No se pudo conectar el cable a la partida actual.');
+      netLink = { pointer, onBytes, onEnd, state: 'handshake' };
+      linkPending = false;
+      resumeAfterLinkCancel = false;
+      clearAudio();
+      lastTime = null;
+      accumulator = 0;
+      drainLink(); // HELLO, exactly as queued by the original core.
+      notify();
+      if (status === 'paused') resume();
+    } catch (error) {
+      if (netLink) stopLink('core-error', error.message);
+      else { module._free(pointer); linkPending = false; notify(); }
+      throw error;
+    }
+  }
+
+  function feedLink(bytes) {
+    if (!netLink || !(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 65536) {
+      throw new Error('Paquete Link inválido o sesión inactiva.');
+    }
+    const pointer = module._malloc(bytes.length);
+    if (!pointer) throw new Error('No hay memoria para recibir el paquete Link.');
+    let result;
+    try {
+      new Uint8Array(module.memory.buffer, pointer, bytes.length).set(bytes);
+      result = module._netlink_feed(pointer, bytes.length);
+    } finally { module._free(pointer); }
+    if (result !== 1) {
+      const message = module.UTF8ToString(module._netlink_error_msg());
+      throw new Error(message || 'El núcleo rechazó el protocolo Link.');
+    }
+    drainLink();
+    // In handshake, tick must report the specific rejection BEFORE generic
+    // peer_done. A paused core waits for resume instead of advancing here.
+    if (module._netlink_peer_done() && netLink.state !== 'handshake') { stopLink('peer-left', 'Rival desconectado.'); return; }
+    pump(); // An inbound REPLY can release an existing stall immediately.
+  }
+
+  function stopLink(reason = 'disconnected', message = 'Cable Link desconectado.') {
+    linkPending = false;
+    const session = netLink;
+    if (!session || session.closing) {
+      if (resumeAfterLinkCancel) { resumeAfterLinkCancel = false; resume(); }
+      notify();
+      return;
+    }
+    session.closing = true;
+    try {
+      // Exit queues BYE and flushes this cart's battery. Deliver it before
+      // freeing the shuttle or asking the coordinator to close DataChannel.
+      module._netlink_exit();
+      drainLink(session);
+    } catch (error) { message = error.message; }
+    finally {
+      netLink = null;
+      module._free(session.pointer);
+      lastTime = null;
+      accumulator = 0;
+      clearAudio();
+      notify();
+    }
+    try { persist().catch(reportSaveError); } catch (error) { reportSaveError(error); }
+    session.onEnd?.({ reason, message });
   }
 
   function readSave() {
@@ -186,6 +329,16 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
       if (error.errno === 44) return null; // Emscripten ENOENT: no battery file yet.
       throw error;
     }
+  }
+
+  function setSpeed(value) {
+    if (![1, 2].includes(value)) throw new Error('La velocidad debe ser 1x o 2x.');
+    if (value !== 1 && (netLink || linkPending)) throw new Error('El avance rápido no está disponible durante PvP.');
+    speed = value;
+    accumulator = 0;
+    lastTime = null;
+    clearAudio(); // 2x intentionally silent; never queue accelerated PCM.
+    notify();
   }
 
   function persist() {
@@ -223,7 +376,7 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
   }
 
   function resume() {
-    if (status !== 'paused') return;
+    if (status !== 'paused' || linkPending) return;
     unlockAudio().catch(onError);
     status = 'running';
     lastTime = null;
@@ -240,6 +393,7 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
   }
 
   async function loadRom(file) {
+    assertGameMutable();
     if (!/\.gba$/i.test(file.name) || file.size < 192 || file.size > 32 * 1024 * 1024) {
       throw new Error('Selecciona una ROM .gba válida, de hasta 32 MiB.');
     }
@@ -265,8 +419,10 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
         onError(new Error('El guardado automático no está disponible. Exporta tus partidas .sav antes de salir.', { cause: error }));
       }
     }
+    assertGameMutable();
     pause();
     await persist();
+    assertGameMutable();
     status = 'loading';
     notify();
     try {
@@ -301,20 +457,24 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
   }
 
   async function reset() {
+    assertGameMutable();
     if (!romId || status === 'error') return;
     const wasRunning = status === 'running';
     pause();
     await persist();
+    assertGameMutable();
     boot();
     if (wasRunning) resume();
   }
 
   async function importSave(file) {
+    assertGameMutable();
     if (!romId || status === 'error') throw new Error('Carga una ROM antes de importar su partida.');
     if (!/\.sav$/i.test(file.name) || !saveChipSize(file.size)) {
       throw new Error('Selecciona un .sav sin comprimir de 512 B, 8, 32, 64 o 128 KiB, con un registro RTC opcional de 16 B.');
     }
     const bytes = new Uint8Array(await file.arrayBuffer());
+    assertGameMutable();
     const existing = readSave();
     if (existing?.length && saveChipSize(existing.length) !== saveChipSize(bytes.length)) {
       throw new Error('El tamaño de esta partida no coincide con la memoria de guardado del juego cargado.');
@@ -346,7 +506,9 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
   }, 2000);
 
   return {
-    loadRom, pause, resume, reset, importSave, exportSave, persist, getState, unlockAudio,
+    loadRom, pause, resume, reset, importSave, exportSave, persist, getState, unlockAudio, setSpeed,
+    reserveLink, startLink, feedLink, stopLink,
+    awaitingLink: () => Boolean(module?._gba_awaiting_link()),
     setButton(button, pressed) {
       if (!(button in INPUTS) || !romId || status !== 'running') return;
       module._setInput(INPUTS[button], pressed ? 1 : 0);
@@ -361,6 +523,7 @@ export function createEmulator({ canvas, storage, onStateChange, onError }) {
       notify();
     },
     destroy() {
+      stopLink();
       pause();
       destroyed = true;
       clearInterval(autosave);

@@ -1,5 +1,26 @@
 [build]
-  publish = "public"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  # EMERALD_PRIVATE_STORE is a non-secret Blobs store name that the server
+  # validates against a hardcoded constant; real secrets remain scanned.
+  SECRETS_SCAN_OMIT_KEYS = "EMERALD_PRIVATE_STORE"
+
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  port = 8888
+  framework = "#custom"
+  autoLaunch = false
+
+[server]
+  path = "/api/*"
+
+[server.scale]
+  min = 0
+  max = 1
 
 [[headers]]
   for = "/*"
@@ -7,7 +28,8 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "DENY"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' wss: ws://localhost:8888 ws://127.0.0.1:8888; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 
 [[headers]]
   for = "/core/*.wasm"

@@ -362,6 +362,16 @@ kbd { display: inline-grid; place-items: center; min-width: 23px; height: 23px; 
 .session-panel .rom-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c5d7c9; }
 .session-panel .session-status { font-size: 11px; color: #8f869e; margin-top: 3px; }
 .session-panel .session-message { margin-top: 12px; padding: 10px; border: 1px solid #6b5c78; border-radius: 6px; font-size: 11px; color: #ded1e5; }
+.room-opener { grid-column: 1 / -1; }
+.join-room { margin: 16px 0 24px; }
+.join-room label { display: block; margin-bottom: 8px; font-size: 11px; color: #bdb4c9; }
+.join-room > div { display: flex; gap: 8px; }
+.join-room input { min-width: 0; width: 100%; padding: 11px 9px; border: 1px solid #53485f; border-radius: 6px; background: #111016; color: #d0e3d6; font: 13px ui-monospace, Consolas, monospace; letter-spacing: 1.3px; text-transform: uppercase; }
+.join-room button { border: 1px solid #53485f; border-radius: 6px; padding: 0 14px; background: #ffffff05; color: #d0cbd9; font-size: 12px; }
+.room-code { display: block; margin: 25px 0 12px; padding: 18px 10px; border: 1px solid #7fba9844; border-radius: 8px; background: #94d6b208; color: #c4ecd3; text-align: center; font: 20px ui-monospace, Consolas, monospace; letter-spacing: 3px; user-select: text; }
+.rooms-panel #room-members { font-size: 12px; color: #b5a8c2; text-align: center; }
+.rooms-panel #room-status { min-height: 44px; }
+.rooms-panel button:disabled { opacity: .4; cursor: default; }
 .session-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 23px 0 18px; }
 .session-grid button { min-height: 42px; border: 1px solid #53485f; border-radius: 7px; background: #ffffff05; color: #d0cbd9; font-size: 12px; }
 .session-grid button:enabled:hover { background: #ffffff0d; }
@@ -379,4 +389,33 @@ kbd { display: inline-grid; place-items: center; min-width: 23px; height: 23px; 
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .session-actions button { height: 25px; }
+}
+
+/* RC actions and immersive viewport. Console geometry/materials stay above. */
+.session-actions .icon-action { position: relative; width: 32px; padding: 6px; display: grid; place-items: center; flex-shrink: 0; }
+.icon-action svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+#fast-forward svg { fill: currentColor; stroke: none; width: 16px; }
+.speed-label { position: absolute; right: 1px; bottom: 0; font: 8px/1 ui-monospace, monospace; }
+.session-actions [aria-pressed="true"] { color: #b7f8d8; border-color: #7fba98; }
+.remember-option { margin-block: 14px 8px; }
+#rom-access-note { margin-block: 10px; }
+#continue-rom { overflow-wrap: anywhere; }
+.admin-toggle { position: absolute; top: 12px; right: 52px; display: grid; place-items: center; width: 32px; height: 32px; padding: 7px; border: 1px solid #49404f; border-radius: 50%; background: #ffffff03; color: #aaa4b7; }
+.admin-toggle svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.admin-toggle:hover { color: #b7f8d8; border-color: #8c819f; }
+.admin-label { display: block; margin: 20px 0 8px; font-size: 12px; }
+#admin-password { width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid #53485f; border-radius: 7px; background: #111016; color: #d0cbd9; font: inherit; }
+.is-immersive body { height: 100dvh; grid-template-rows: minmax(0, 1fr); padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.is-immersive .app-header { position: fixed; top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); width: auto; min-height: 0; z-index: 4; }
+.is-immersive .app-header > :not(.session-actions),
+.is-immersive .session-actions > :not(#immersive-toggle):not(#fast-forward),
+.is-immersive .app-footer { display: none; }
+.is-immersive .stage { grid-row: 1; padding: 36px 0 0; }
+.is-immersive #immersive-toggle { background: #19171feb; }
+@media (max-width: 460px) {
+  .edition { display: none; }
+  .app-header { gap: 8px; }
+  .wordmark > span { font-size: 9px; letter-spacing: 1.3px; }
+  .load-rom-button > span { display: none; }
+  .load-rom-button { width: 30px; padding: 0; justify-content: center; }
 }
