@@ -4,6 +4,9 @@
 
 [build.environment]
   NODE_VERSION = "24"
+  # EMERALD_PRIVATE_STORE is a non-secret Blobs store name that the server
+  # validates against a hardcoded constant; real secrets remain scanned.
+  SECRETS_SCAN_OMIT_KEYS = "EMERALD_PRIVATE_STORE"
 
 [dev]
   command = "npm run dev"
