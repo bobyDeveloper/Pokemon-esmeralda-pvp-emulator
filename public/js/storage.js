@@ -1,5 +1,6 @@
 const DATABASE_NAME = 'emerald-pvp';
 const STORE_NAME = 'saves';
+const ACCESS_STORE = 'local-access';
 let databasePromise;
 
 export async function sha256(bytes) {
@@ -13,9 +14,10 @@ export async function sha256(bytes) {
 function openDatabase() {
   if (!databasePromise) {
     databasePromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DATABASE_NAME, 1);
+      const request = indexedDB.open(DATABASE_NAME, 2);
       request.onupgradeneeded = () => {
-        request.result.createObjectStore(STORE_NAME, { keyPath: 'romId' });
+        if (!request.result.objectStoreNames.contains(STORE_NAME)) request.result.createObjectStore(STORE_NAME, { keyPath: 'romId' });
+        if (!request.result.objectStoreNames.contains(ACCESS_STORE)) request.result.createObjectStore(ACCESS_STORE);
       };
       request.onerror = () => reject(new Error('No se pudo abrir el almacenamiento local.', { cause: request.error }));
       request.onblocked = () => reject(new Error('Cierra otras pestañas de Emerald PVP para abrir el almacenamiento.'));
@@ -35,11 +37,11 @@ function openDatabase() {
   return databasePromise;
 }
 
-async function transaction(mode, operation) {
+async function transaction(mode, operation, storeName = STORE_NAME) {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction(STORE_NAME, mode);
-    const request = operation(transaction.objectStore(STORE_NAME));
+    const transaction = database.transaction(storeName, mode);
+    const request = operation(transaction.objectStore(storeName));
     // Request success alone does not mean that a write has committed.
     transaction.oncomplete = () => resolve(request.result);
     transaction.onerror = transaction.onabort = () => reject(new Error(
@@ -68,4 +70,11 @@ export const saveStorage = {
     await transaction('readwrite', store => store.put({ romId, name, bytes: copy, checksum, updatedAt }));
     return updatedAt;
   },
+};
+
+// Only an explicitly authorized file handle/identity; never the ROM's bytes.
+export const romAccess = {
+  get: () => transaction('readonly', store => store.get('last'), ACCESS_STORE),
+  put: record => transaction('readwrite', store => store.put(record, 'last'), ACCESS_STORE),
+  remove: () => transaction('readwrite', store => store.delete('last'), ACCESS_STORE),
 };

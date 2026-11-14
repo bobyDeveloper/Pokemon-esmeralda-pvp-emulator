@@ -1,11 +1,14 @@
 import { onShutdown, upgradeWebSocket } from '@netlify/server';
 import { RoomManager } from './rooms.mjs';
+import { createAdminHandler } from './admin.mjs';
 
 const rooms = new RoomManager();
+const admin = createAdminHandler();
 onShutdown(() => rooms.shutdown());
 
 export default function handler(request, context) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/admin/')) return admin(request, context);
   const json = (data, status = 200, headers = {}) => Response.json(data, {
     status, headers: { 'Cache-Control': 'no-store', ...headers },
   });

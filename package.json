@@ -1,6 +1,6 @@
 {
   "name": "emerald-pvp",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "private": true,
   "description": "Consola GBA con Dingbat, guardados locales y salas de señalización WebSocket.",
   "type": "module",
@@ -10,14 +10,22 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:online": "netlify dev",
-    "check": "node --check public/js/main.js && node --check public/js/controls.js && node --check public/js/emulator.js && node --check public/js/storage.js && node --check public/js/multiplayer.js && node --check netlify/server/index.mjs && node --check netlify/server/rooms.mjs && node --check scripts/dev.mjs",
-    "test": "node --test tests/core.test.mjs tests/rooms.test.mjs",
-    "test:online": "node --test tests/multiplayer.integration.test.mjs"
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/dev.mjs --dist",
+    "check": "node --check public/js/main.js && node --check public/js/controls.js && node --check public/js/emulator.js && node --check public/js/storage.js && node --check public/js/multiplayer.js && node --check public/js/link.js && node --check public/js/immersive.js && node --check public/js/admin.js && node --check netlify/server/index.mjs && node --check netlify/server/rooms.mjs && node --check netlify/server/admin.mjs && node --check netlify/server/password.mjs && node --check scripts/admin-password.mjs && node --check scripts/dev.mjs && node --check scripts/build.mjs",
+    "test": "node --test tests/core.test.mjs tests/rooms.test.mjs tests/link.test.mjs tests/build.test.mjs tests/admin.test.mjs",
+    "test:online": "node --test tests/multiplayer.integration.test.mjs",
+    "test:link": "node --test tests/link.browser.test.mjs",
+    "test:experience": "node --test tests/experience.browser.test.mjs",
+    "test:admin": "node --test tests/admin.integration.test.mjs",
+    "admin:password": "node scripts/admin-password.mjs"
   },
   "dependencies": {
+    "@netlify/blobs": "11.1.9",
     "@netlify/server": "0.1.6"
   },
   "devDependencies": {
+    "esbuild": "0.28.1",
     "netlify-cli": "27.19.0"
   }
 }

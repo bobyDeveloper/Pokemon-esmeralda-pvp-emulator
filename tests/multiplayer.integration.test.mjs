@@ -45,6 +45,10 @@ test('Netlify dev serves health, static assets and the required upgrade route', 
   assert.equal(data.protocol, 1);
   assert.match(data.instanceId, /^[\da-f-]{36}$/);
   assert.equal(health.headers.get('cache-control'), 'no-store');
+  const privateFile = await fetch(new URL('/api/admin/rom', origin));
+  assert.ok([401, 404].includes(privateFile.status));
+  assert.equal(privateFile.headers.get('cache-control'), 'private, no-store');
+  assert.equal(privateFile.headers.has('access-control-allow-origin'), false);
   assert.equal((await fetch(new URL('/api/signal', origin))).status, 426);
   assert.equal((await fetch(new URL('/api/missing', origin))).status, 404);
   assert.equal((await fetch(new URL('/api/health', origin), { method: 'POST' })).status, 405);

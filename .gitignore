@@ -8,3 +8,6 @@ node_modules/
 Thumbs.db
 coverage/
 artifacts/
+/game_test/
+/dist/
+/references/

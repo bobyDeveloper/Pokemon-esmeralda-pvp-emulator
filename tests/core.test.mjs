@@ -55,7 +55,7 @@ test('the local server serves WASM and JS with MIME and CSP compatible with Netl
     else await response.arrayBuffer();
   }
   const netlify = (await read('netlify.toml')).toString();
-  assert.match(netlify, /publish = "public"/);
+  assert.match(netlify, /publish = "dist"/);
   assert.match(netlify, /wasm-unsafe-eval/);
   assert.match(netlify, /application\/wasm/);
 });

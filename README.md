@@ -1,36 +1,55 @@
-# Emerald PVP · Fase 3A
+# Emerald PvP · 1.0.0-rc.1
 
-Emulación GBA real con Dingbat WebAssembly, JavaScript vanilla y ES Modules. Se conserva la consola aprobada: Advance SP en vertical, Advance clásica en horizontal, un Canvas de 240 × 160 y el mismo sistema multitouch/teclado. Las salas de dos personas ya disponen de señalización WebSocket en Netlify Server. El juego sigue siendo individual: no hay WebRTC, cable Link ni sincronización del emulador.
+Emulador GBA web con JavaScript vanilla, Dingbat WASM oficial y una consola morada responsive: Advance SP en vertical y Advance clásica en horizontal. Usa un único Canvas de 240 × 160, guardados locales y cable Link original sobre WebRTC, con salas de dos personas en Netlify Server.
 
-## Iniciar
+**RC preparado para Deploy Preview.** Las pruebas locales pasan; faltan la validación remota de Admin Test y un combate completo de Pokémon Esmeralda. No se distribuyen juegos ni BIOS propietarios.
 
-Node.js 24 existente y npm. Instalar las dependencias del proyecto con `npm ci`; no hay compilación frontend ni de Nim. No se instalan herramientas globales.
+| Vertical · 390 × 844 | Horizontal · 844 × 390 |
+| --- | --- |
+| ![Advance SP, sin ROM cargada](docs/screenshots/portrait.png) | ![Advance clásica, sin ROM cargada](docs/screenshots/landscape.png) |
+
+Capturas del build actual, sin ROM ni credenciales. Las referencias originales permanecen en `references/portrait.jpg` y `references/landscape.jpg`, ignoradas y fuera del sitio.
+
+## Entorno y desarrollo
+
+Requiere Node.js 24 y npm existentes. No se necesitan compiladores, herramientas globales ni frameworks. En PowerShell puede usarse `npm.cmd` / `npx.cmd` si la política de scripts bloquea los comandos sin extensión.
 
 ```sh
 npm ci
-npx netlify dev
+npx netlify dev --offline --no-open
 ```
 
-Abrir **http://localhost:8888** para frontend y servidor de salas juntos. `npm run dev:online` es equivalente. Para pruebas sin acceso a Netlify, `npx netlify dev --offline --no-open` funciona sin login. El servidor estático original sigue disponible con `npm run dev` en **http://127.0.0.1:5173**, pero ese comando por sí solo no proporciona `/api/health` ni `/api/signal`. No ejecutar ambos modos simultáneamente: Netlify Dev inicia el mismo servidor estático en el puerto 5173.
+Abrir **http://localhost:8888**: frontend y API juntos. `npm run dev:online` inicia Netlify Dev normalmente; `npm run dev` sirve solo fuentes en **5173**, sin API. Netlify Dev arranca ese mismo servidor: comprobar puertos y evitar ejecutarlo dos veces. No abrir el HTML como `file://`.
 
-La instalación existente encontrada en este equipo es `E:\tools\node-v24.22.3-win-x64` (Node 24.22.3, npm 11.19.1). Si esta terminal no la encuentra en PATH, añadirla solo al proceso actual:
-
-```powershell
-$env:Path = 'E:\tools\node-v24.22.3-win-x64;' + $env:Path
-npx.cmd netlify dev
+```sh
+npm run build
+npm run preview
 ```
 
-No se descargó ni reinstaló Node y no se modificó la configuración global. La API SHA-256 exige HTTPS o localhost; un teléfono que acceda por una IP HTTP de la LAN necesitará servir el sitio mediante HTTPS. Netlify ofrece el contexto HTTPS requerido. No abrir `index.html` directamente como `file://`.
+El preview estático sirve `dist/` en **4173**, sin API. Para probar **el build y el servidor juntos**, detener los servidores propios anteriores y ejecutar:
 
-## Usar la consola
+```sh
+npx netlify dev --offline --no-open --command "npm run preview" --target-port 4173 --port 8888
+```
 
-1. Pulsar **Cargar ROM** en la barra superior y elegir una ROM local `.gba` válida, de hasta 32 MiB. No se distribuyen juegos ni BIOS propietarios.
-2. Jugar con los botones táctiles o el teclado. El audio se activa mediante interacción del usuario.
-3. Abrir **···** para pausar/reanudar, reiniciar, importar/exportar `.sav` o silenciar el audio. Reiniciar conserva la memoria de guardado del cartucho; no es un borrado de partida.
-4. Guardar desde el menú del propio juego. La memoria de batería se persiste en IndexedDB cada dos segundos cuando cambia, y también al pausar, cambiar de ROM, reiniciar y ocultar la página.
-5. Tras recargar, seleccionar la misma ROM: su SHA-256 recupera su partida incluso si el archivo tiene otro nombre. La ROM se conserva solo en memoria, no en IndexedDB.
+SHA-256 y otras APIs requieren HTTPS o localhost; HTTP por IP de LAN en un teléfono no equivale a localhost. Netlify proporciona HTTPS.
 
-| Control | Teclado |
+## Jugar y guardar
+
+1. **Cargar ROM** abre una ROM local `.gba` válida de hasta 32 MiB. El núcleo se descarga solo al cargarla. El audio requiere un gesto del usuario.
+2. **···** permite pausar, reanudar, reiniciar, importar y exportar batería `.sav`, silenciar y abrir salas. Reiniciar conserva la batería; importar un save reinicia para aplicarlo. Exportar copias de seguridad antes de reemplazar una partida.
+3. Guardar dentro del juego. IndexedDB persiste la batería cuando cambia, aproximadamente cada dos segundos, y al pausar, cambiar de ROM u ocultar la página. La identidad es el SHA-256 de la ROM; renombrarla no cambia su partida.
+4. **Recordar acceso a esta ROM local** exige autorización explícita. **Continuar** revalida el SHA-256 y solicita permiso o selección del mismo archivo cuando sea necesario. Solo se guarda identidad y, si el navegador lo permite, una referencia de lectura; nunca bytes de ROM. Desmarcar olvida el acceso y conserva los saves.
+5. **⏩** alterna 1x/2x acelerando el scheduler real, con trabajo acotado. A 2x se silencia el audio. Reservar Link fuerza 1x y bloquea fast-forward, cambio de ROM, reset e importación.
+6. **Pantalla completa** oculta elementos secundarios y conserva todos los controles y una salida visible. Usa Fullscreen API si se concede; el fallback CSS usa `100dvh` y safe areas. Safari iPhone no tiene fullscreen nativo garantizado. El mismo botón o Escape permiten salir.
+
+Los saves admiten 512 B, 8/32/64/128 KiB y un RTC opcional de 16 B, sujetos al chip de la partida vigente. Se comprueban integridad y transacción de escritura. Un registro corrupto se conserva, bloquea el autoguardado y requiere importar explícitamente una copia válida. Sin IndexedDB se informa la limitación y sigue disponible la exportación. No hay save states ni rewind.
+
+ROMs seleccionadas y progreso permanecen locales; no se suben al backend. Admin Test, opcional, descarga archivos autorizados desde un almacén privado. No sincroniza el progreso. Navegación privada, cuotas, borrado de datos o cierre forzado pueden perder almacenamiento o impedir la última escritura.
+
+### Controles
+
+| GBA | Teclado |
 | --- | --- |
 | Cruceta | Flechas o WASD |
 | A / B | X / Z o K / J |
@@ -38,165 +57,165 @@ No se descargó ni reinstaló Node y no se modificó la configuración global. L
 | Start | Intro |
 | Select | Mayúsculas o Retroceso |
 
-Se pueden combinar teclas y dedos, mantener varios botones y deslizar la cruceta. Tab y Espacio permiten activar los controles. Las entradas se liberan al cancelar un puntero, perder foco, ocultar la pestaña, abrir un diálogo o cambiar de orientación. El emulador se pausa al perder foco; se reanuda desde ···. Girar la pantalla conserva el motor, la memoria y el Canvas y no pausa ni reinicia la partida.
+Multitouch, cruceta deslizante, teclado y Gamepad estándar se agregan por fuente. Tab/Espacio permiten activar controles. Cancelar un puntero, perder captura/foco, ocultar la página, abrir diálogos o girar libera entradas sin soltar otra fuente activa.
 
-## Partidas locales
+Perder foco/visibilidad pausa CPU y audio. En individual se reanuda desde **···**; con Link se reanuda al regresar únicamente una pausa automática. Una pausa manual requiere reanudación explícita y detiene también al rival. Girar conserva Canvas, núcleo y memoria sin reiniciar.
 
-- Formato: memoria de batería `.sav`; no son estados instantáneos del emulador.
-- Tamaños admitidos: 512 B, 8, 32, 64 y 128 KiB, con un registro RTC opcional de 16 B. Se rechazan tamaños incompatibles con una partida ya generada por el juego.
-- La importación reinicia el núcleo para cargar la partida. Si el juego estaba pausado, permanece pausado. Un `.sav` no contiene necesariamente la identidad del juego: elegir una copia correspondiente a la ROM cargada.
-- Cada partida se identifica por SHA-256 de la ROM. Sus bytes se copian y se almacenan con un segundo SHA-256. La escritura solo se considera completada cuando termina la transacción IndexedDB.
-- Si la verificación de integridad falla, se conserva el registro existente, se bloquea el autoguardado y se carga la ROM en pausa. Importar una copia válida repara el registro de manera explícita. No se sobrescribe automáticamente con una partida nueva.
-- Si IndexedDB no está disponible, se puede jugar y exportar manualmente; la interfaz avisa que el guardado automático no está disponible. Un fallo de escritura se informa y el autoguardado vuelve a intentarse.
-- ROMs y partidas no se suben a ningún servidor. La aplicación solicita sus propios recursos estáticos y, al usar las salas, abre un WebSocket de señalización en el mismo sitio. No envía ROMs, guardados ni controles del emulador al servidor. No se incluye la sincronización de Dingbat ni su service worker.
+## Salas y Link
 
-Exportar copias antes de borrar los datos del navegador. La navegación privada, la cuota del dispositivo y el cierre forzado pueden afectar a IndexedDB; cerrar inmediatamente después de guardar puede impedir que se complete la última transacción. El guardado automático conserva memoria de batería, no el punto exacto de ejecución.
+En ambos dispositivos, cargar **exactamente la misma ROM (SHA-256)**; los saves pueden ser distintos. Abrir **··· → Salas**: el host crea y comparte el código de diez símbolos; el invitado se une. Se rechaza un tercer jugador. Pulsar **Conectar cable Link** en ambos antes de iniciar la conexión dentro del Club Cable del juego. Estar en una sala no significa tener el cable conectado.
 
-## Auditoría y procedencia del motor
+El WebSocket permanece abierto para membresía y señales SDP/ICE. Un único DataChannel `link`, fiable, ordenado y binario, transporta el protocolo SIO original. No intercambia ROMs, BIOS, saves ni estados. El attach conserva la partida, usa lockstep sin rollback y mantiene CRC estricto; las incompatibilidades SHA/CRC sobreviven a cierres genéricos. Solo un frame completado avanza el reloj; un stall espera al rival.
 
-Motor: [Dingbat](https://github.com/mattrbeck/dingbat), Matthew Beck, licencia MIT.
+Al desconectar se drena BYE y se vuelve a individual. Abandonar/cerrar como host invalida la sala; al salir el invitado queda libre su plaza. Tras caída/reinicio se descarta la membresía; la reconexión limitada no reproduce operaciones ni restaura salas.
 
-- Commit fijado: **`91709f81223ee6a8be61e251466a7d748141d458`**.
-- Versión web publicada: `91709f8`; build ID: `a6e20365772b723a 91709f8`.
-- Se reutilizaron sin modificar `em.js` y `em.wasm` publicados en el sitio oficial, verificados contra su [manifiesto de hashes](https://dingbat.gg/asset-manifest.json).
-- Compilación local: **no necesaria**. No se instalaron Nim, Emscripten ni otras herramientas. La documentación oficial indica `nimble wasm`, que necesita Nim, Emscripten y zippy. No necesita SDL para la web.
-- Atribuciones, tamaños y hashes completos: `public/core/README.md`, `LICENSE` y `THIRD_PARTY_NOTICES.md`.
+**Red:** STUN vacío por defecto; configuración opcional mediante el array JSON `localStorage['emerald:link:stun']`, solo URL `stun:`/`stuns:`. No se añade ningún proveedor automáticamente. Sin TURN no se garantiza conectar entre NAT/CGNAT distintos. Una suspensión móvil dura puede cerrar sockets y exigir reconectar explícitamente.
 
-La API se comprobó en el código de esa revisión: `initFromEmscripten` inicia el núcleo desde MEMFS, `loop_tick` avanza un frame, `setInput` recibe los ordinales de `common/input.nim`, `wasm_fb_ptr` entrega RGBA y `getAudioBufferPtr/Len` entregan PCM estéreo float32 a 32768 Hz. `wasm_flush_save` actualiza `rom.sav` antes de leerlo. El motor usa su BIOS HLE incorporada.
+### API de salas
+
+`GET /api/health` devuelve salud, protocolo e instancia. `/api/signal` requiere upgrade WebSocket (426 sin upgrade), valida Origin de navegador y acepta JSON con `type` y `requestId` (1–64 caracteres alfanuméricos, `_` o `-`).
+
+| Tipo | Campos | Efecto |
+| --- | --- | --- |
+| `create` | — | Crea sala; rol host asignado al socket |
+| `join` | `code` | Se une como guest |
+| `leave` | — | Abandona |
+| `close` | — | Solo host; cierra para ambos |
+| `signal` | `data`: objeto JSON | Solo al compañero de la misma sala |
+
+Respuestas: `room`, `left`, `room-closed`, `ok`; errores `{ type: 'error', requestId, code, message }`. Al conectar se recibe `welcome`. Los roles/destinatarios no se aceptan del payload.
+
+Por instancia: 200 conexiones, 8/IP, 100 salas; códigos seguros de 50 bits; mensajes de 16 KiB, profundidad 8, señales de hasta 512 valores y cola de 64 KiB. Ráfaga de 20 mensajes/socket con recarga de 10/s; crear/unirse admite 10 intentos/IP con recarga de 0,5/s. Excesos, binarios y receptores lentos se rechazan. El apagado notifica y cierra con 1012.
 
 ## Arquitectura
 
-| Archivo | Responsabilidad |
+| Archivos | Responsabilidad |
 | --- | --- |
-| `public/index.html` | Una consola compartida, un Canvas, diálogos y selectores de archivos locales |
-| `public/style.css` | Estilos aprobados de las carcasas y estilos adicionales de las acciones de fase 2 |
-| `public/js/main.js` | Coordinación de interfaz, archivos, eventos y ciclo de vida de la página |
-| `public/js/controls.js` | Única fuente de entradas: teclado, Pointer Events, multitouch y accesibilidad |
-| `public/js/emulator.js` | Adaptador real: carga del núcleo, MEMFS, frames, Canvas, Web Audio y batería |
-| `public/js/storage.js` | IndexedDB, SHA-256 y verificación de integridad |
-| `public/js/multiplayer.js` | API WebSocket, estado de sala, peticiones y reconexión limitada |
-| `netlify/server/index.mjs` | Handler de Netlify Server, health, origen y upgrade WebSocket |
-| `netlify/server/rooms.mjs` | Salas efímeras, roles, validación, cuotas y limpieza |
-| `public/core/` | Dos artefactos oficiales y sus avisos/procedencia |
-| `scripts/dev.mjs` | Servidor estático local sin dependencias; MIME WASM y CSP |
-| `tests/` | Pruebas nativas de Node y generador de una ROM diagnóstica propia, sin contenido propietario |
-| `references/` | Referencias originales `.jpg`, fuera del sitio publicado |
+| `public/index.html`, `style.css` | DOM/Canvas compartido, carcasas y diálogos |
+| `js/main.js` | UI, archivos y ciclo de vida |
+| `js/controls.js` | Única fuente de entradas; emite `emerald:input` |
+| `js/emulator.js`, `storage.js` | Dingbat/MEMFS, scheduler, audio/Link ABI; IndexedDB/SHA-256 |
+| `js/multiplayer.js`, `link.js` | Salas/señalización; negociación RTC y transporte binario |
+| `js/immersive.js`, `admin.js` | Fullscreen/fallback; acceso privado y descargas |
+| `netlify/server/{index,rooms,admin,password}.mjs` | Handler oficial, salas efímeras, autorización y scrypt |
+| `scripts/`, `tests/` | Servidor estático, build/generador de credenciales y QA local |
 
-`controls.js` emite `emerald:input` con `{ button, pressed, pressedButtons }`. `main.js` conecta esos eventos al adaptador. Ningún archivo del motor instala otros listeners de teclado o táctil. `main.js` exporta `canvas`, `consoleElement`, `controls`, `standby`, `emulator` y `multiplayer` como punto de inspección e integración. El script clásico oficial requiere los globales `Module` y `FS`; su uso se limita al adaptador. La aplicación mantiene ES Modules.
+Las rutas `js/` de la tabla son relativas a `public/`. No hay backend de emulación ni base de datos de partidas. Blobs conserva solo archivos privados autorizados y registros administrativos de sesión.
 
-## Verificación
+## Admin Test y Blobs
+
+**Desactivado por defecto; el acceso público normal no exige credenciales.** El candado en **···** abre el formulario; el backend autoriza cada lectura. No existe uploader público.
+
+Generar credenciales en una terminal interactiva, con contraseña nueva (mínimo 16 bytes); no se muestra ni se escribe a un archivo:
+
+```sh
+npm run admin:password
+```
+
+El comando imprime únicamente el hash scrypt y un secreto aleatorio para copiarlos a Netlify. No pegar esos valores en Git, README, logs de QA, frontend ni `netlify.toml`.
+
+En el proyecto Netlify correcto configurar manualmente estas cuatro variables, **scope Functions, contexto Deploy Previews**:
+
+| Variable | Valor |
+| --- | --- |
+| `EMERALD_ADMIN_ENABLED` | `true` |
+| `EMERALD_ADMIN_PASSWORD_HASH` | Hash generado |
+| `EMERALD_SESSION_SECRET` | Secreto generado |
+| `EMERALD_PRIVATE_STORE` | `emerald-private-preview` |
+
+En **Production**, dejar `EMERALD_ADMIN_ENABLED` ausente o `false`; no heredar el `true` de preview. Solo una habilitación explícita futura usaría credenciales separadas y `emerald-private-production`. Cambiar variables exige redesplegar: Server recibe valores con [scope Functions fijados por deploy](https://docs.netlify.com/build/server/configuration/#environment-variables).
+
+El servidor selecciona el store por [`context.deploy.context`](https://docs.netlify.com/build/server/api/#deploy), y falla cerrado ante contexto desconocido o configuración cruzada. Dev usa los indicadores locales oficiales `NETLIFY_DEV`/`NETLIFY_LOCAL` y siempre preview; su `deploy.context` puede estar vacío. **Netlify Dev usa almacenamiento local aislado, no los objetos remotos.** Los stores de [`getStore` son compartidos por el sitio](https://docs.netlify.com/build/data-and-storage/netlify-blobs/#deploy-specific-stores): la separación preview/producción la impone este servidor.
+
+### Validación remota con health.txt
+
+Estos pasos son **manuales y escriben en el sitio vinculado**; no forman parte del build ni de las pruebas locales. Con la CLI ya autenticada, comprobar primero `npx netlify status` y confirmar el proyecto. Desde PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+Set-Content -LiteralPath artifacts/health.txt -Value 'Diagnostico privado correcto' -Encoding utf8
+npx.cmd netlify blobs:set emerald-private-preview admin/health --input artifacts/health.txt
+npx.cmd netlify blobs:get emerald-private-preview admin/health --output artifacts/health-received.txt
+Get-Content -LiteralPath artifacts/health-received.txt
+```
+
+1. Abrir el **Deploy Preview por HTTPS**. Sin sesión, `/api/admin/health` debe devolver 401; con Admin desactivado devuelve 404.
+2. Autenticarse desde el candado y pulsar **Verificar diagnóstico**: debe aparecer el texto. Revisar cookie `__Host-` con Secure/HttpOnly/SameSite=Strict, respuestas `private, no-store`, ausencia de URLs directas y rechazo de Origin/CSRF ajenos.
+3. Cerrar sesión: la cookie anterior ya no debe autorizar nuevas lecturas. En producción, `/api/admin/health` siempre es 404; Admin desactivado tampoco expone los demás endpoints.
+4. Eliminar únicamente el objeto de prueba y confirmar que deja de estar disponible:
+
+```sh
+npx netlify blobs:delete emerald-private-preview admin/health
+```
+
+Solo después, si se dispone de derechos para el uso remoto, las claves de archivos autorizados son `admin/rom` y `admin/save`. La CLI admite el mismo `blobs:set STORE KEY --input RUTA` y `blobs:delete STORE KEY`. No subir ni distribuir ROMs comerciales como parte del RC. `game_test/` sigue ignorado y nunca se lee durante el build.
+
+**Cargar prueba** reutiliza el loader normal. Una partida local válida tiene prioridad sobre la plantilla; una corrupta no se reemplaza automáticamente. El servidor nunca escribe `admin/rom` ni `admin/save`. Logout revoca nuevas lecturas, conservando la emulación y el progreso ya cargados.
+
+### Seguridad y límites
+
+- Contraseñas: scrypt N=65536, r=8, p=1, sal de 16 B y clave de 32 B; comparaciones constantes. Máximo dos hashes concurrentes; login JSON acotado a 2 KiB/3 s, cuotas de cinco intentos/IP con recuperación de uno/minuto.
+- Sesiones de 15 min, sid aleatorio de 32 B firmado con HMAC y ligado a origen/store/credencial. Cookie HttpOnly, SameSite Strict y Secure/`__Host-` en HTTPS; HTTP únicamente loopback local. Cada petición lee su registro en Blobs con consistencia fuerte; no hay caché de autorización. Logout elimina el registro antes de confirmar.
+- Origin/Fetch Metadata y cabecera de login; CSRF para logout/binarios. CSRF solo en memoria; `sessionStorage` guarda únicamente un booleano de restauración, nunca contraseña ni token. Cookies falsificadas se rechazan antes de consultar Blobs.
+- Rutas fijas: `/api/admin/{login,session,logout,rom,save,health}`. No se aceptan store, key ni query arbitrarios. Sin CORS público, URLs firmadas, logs de credenciales ni caché pública.
+- Lecturas autenticadas por stream: ROM hasta 32 MiB, save hasta 131088 B, diagnóstico hasta 1 KiB; 15 s sin datos/120 s totales. El frontend también cuenta bytes y termina/valida antes de cargar; nunca inicia descargas parciales.
+- Rate limiting por instancia/IP, no distribuido; se reinicia al reemplazar el servidor. Rotar secreto o hash y redesplegar revoca globalmente. Los registros caducados se eliminan al consultarlos; los huérfanos se limpian manualmente en Blobs, dentro de `admin/sessions/`.
+
+## Pruebas y métricas del RC
+
+Con Netlify Dev sirviendo preview en 4173/8888 mediante el comando anterior, ejecutar consecutivamente:
 
 ```sh
 npm run check
 npm test
-```
-
-`check` verifica la sintaxis de los módulos propios. Las pruebas de `npm test` verifican los hashes oficiales, la compilación del WASM, MIME/CSP, configuración estática de Netlify, aislamiento de `public/`, rechazo de cargas HTTP, Canvas único y cabecera de la ROM diagnóstica, roles, aislamiento, permisos, limpieza, límites y apagado del administrador de salas. El hash de `em.js` se verifica con LF canónico: Git puede convertir su salto final a CRLF en Windows; no se reescribe el motor.
-
-También se ejecutaron en Chrome headless, con el CSP de desarrollo activo:
-
-- Carga real del WASM mediante el selector de ROMs.
-- ROM diagnóstica propia generada por `tests/gba-probe.mjs`: vídeo, PCM no nulo programado en Web Audio y lectura de los diez botones en el registro KEYINPUT real de la GBA.
-- Multitouch A+B, combinación táctil/teclado, deslizamiento de cruceta y teclado con foco en la barra de acciones.
-- Diez tamaños, de 320 × 568 a 1920 × 1080, sin scroll ni desbordamiento de la barra. Se conservan el mismo núcleo, su estado y el mismo Canvas con relación 3:2 al girar.
-- Pausa de CPU y audio, reanudación y reinicio conservando memoria de batería.
-- Importación/exportación de un `.sav` de 32768 B idéntico byte a byte y recuperación del mismo SHA-256 tras recargar.
-- Importación, exportación y persistencia idénticas byte a byte de un `.sav` FLASH de 128 KiB con un registro adicional de RTC de 16 B (131088 B en total).
-- Detección de datos corruptos, protección contra autoguardado y reparación explícita mediante importación.
-- Rechazo de ROM inválida y `.sav` de tamaño incompatible sin sustituir la sesión vigente.
-- Ejecución de `blendprobe.gba`, homebrew del repositorio oficial con código fuente, con 14 colores distintos renderizados en ambas orientaciones. No se publica esa ROM.
-- Sin errores de JavaScript, consola ni CSP en esos recorridos. Las capturas y el informe local están en `artifacts/`, ignorado por Git.
-
-No se ejecutó Pokémon Esmeralda: no se proporcionó una ROM. Las pruebas diagnósticas no equivalen a verificar su jugabilidad completa.
-
-## Netlify
-
-`netlify.toml` publica **public/**, sin comando de build ni compilación de Nim en producción. Incluye `application/wasm` y CSP con `wasm-unsafe-eval`; no habilita evaluación genérica de JavaScript. Los artefactos del motor ya están incluidos. Se comprobó la configuración y su equivalente local; no se realizó un despliegue ni se hicieron commits o pushes.
-
-## Pendiente
-
-Validación en Safari/iOS y Android físicos, escucha de audio en hardware real y prueba completa con una ROM de Pokémon Esmeralda suministrada por el usuario. También queda por verificar en juego real la memoria FLASH/RTC de su guardado de 128 KiB. No se han implementado WebRTC, cable Link, partidas PvP, estados instantáneos, sincronización ni biblioteca de ROMs. El backend se limita a salud y señalización de salas; no realiza emulación.
-
-## Salas · fase 3A
-
-Acceso: **··· → Salas**. Crear una sala genera un código de 10 caracteres para compartir. Otra persona puede introducirlo para entrar como invitado; una tercera conexión se rechaza. El host puede cerrar la sala. Abandonar o desconectarse como host la cierra para ambos; si sale el invitado, el host conserva su sala y puede recibir otro invitado.
-
-La interfaz muestra host/invitado y 1/2 o 2/2 personas conectadas. Esto confirma la pertenencia a la sala, no una partida multijugador. El motor, las entradas y la ROM siguen aislados de la red.
-
-### API y protocolo
-
-- `GET /api/health`: `{ ok, service, protocol, instanceId }`, sin caché.
-- `GET /api/signal`: requiere upgrade WebSocket; sin upgrade devuelve HTTP 426. Otros métodos devuelven 405 y rutas API desconocidas 404.
-- Se rechazan orígenes de navegador ajenos al sitio. Los clientes nativos sin `Origin` también pueden conectarse. El código funciona como invitación temporal, sin cuentas ni autenticación persistente.
-- Al conectarse: `{ type: "welcome", protocol: 1, instanceId }`.
-- Peticiones JSON: `{ type, requestId, ...campos }`. `requestId` contiene de 1 a 64 caracteres alfanuméricos, `_` o `-`.
-
-| Petición | Campos adicionales | Resultado |
-| --- | --- | --- |
-| `create` | Ninguno | Evento `room`: código, rol `host`, participantes |
-| `join` | `code` | Evento `room` como `guest`; actualiza al host |
-| `leave` | Ninguno | `left`; el host que sale cierra la sala |
-| `close` | Ninguno | `room-closed`; solo para host |
-| `signal` | `data`: objeto JSON | Se entrega solo al otro miembro de la sala; emisor recibe `ok` |
-
-Errores: `{ type: "error", requestId, code, message }`. Entre otros: `INVALID_MESSAGE`, `INVALID_CODE`, `ROOM_NOT_FOUND`, `ROOM_FULL`, `ALREADY_IN_ROOM`, `FORBIDDEN`, `PEER_UNAVAILABLE` y `RATE_LIMIT`. Ningún cliente puede elegir el destinatario de una señal ni enviar un rol para atribuírselo.
-
-```js
-import { Multiplayer } from './js/multiplayer.js';
-const rooms = new Multiplayer(); // /api/signal del mismo origen
-rooms.addEventListener('statechange', event => console.log(event.detail));
-rooms.addEventListener('signal', event => console.log(event.detail));
-await rooms.createRoom();
-// En otro cliente: await rooms.joinRoom(codigo);
-// API disponible: sendSignal(objeto), leaveRoom(), closeRoom(), disconnect().
-```
-
-La aplicación no envía señales de juego ni crea conexiones WebRTC. `signal` es únicamente un canal JSON entre los dos miembros, disponible para una fase posterior.
-
-### Límites y reinicios
-
-Códigos criptográficos de 50 bits, alfabeto de 32 símbolos sin I/O, una sala por conexión y dos conexiones por sala. Límites de aplicación por instancia:
-
-- Hasta 200 conexiones, 8 por IP y 100 salas.
-- Solo mensajes de texto JSON, hasta 16 KiB UTF-8. Los binarios se cierran con 1003; exceso de tamaño, con 1009.
-- Ráfaga de 20 mensajes por conexión, recarga de 10 por segundo. El exceso cierra con 1008.
-- Crear/unirse: ráfaga de 10 intentos por IP y recarga de 0,5 por segundo. La cuota se conserva temporalmente al reconectar.
-- Profundidad JSON máxima 8, hasta 512 valores por señal y cola de salida máxima 64 KiB. Se eliminan conexiones lentas.
-- Los contadores IP están acotados y se eliminan al quedar inactivos; el administrador limpia inmediatamente miembros y salas al cerrar/error/desconectar.
-- `idleTimeout: 30` activa el ping/pong del SDK para detectar conexiones perdidas.
-
-El hook `onShutdown` avisa con `server-restarting`, vacía las salas y cierra con 1012. El cliente también gestiona caídas abruptas: descarta su sala y las peticiones pendientes y reintenta conexión hasta cinco veces con espera creciente. No reproduce `create`/`join` ni promete recuperar una sala perdida. Al conectarse de nuevo, el usuario crea otra sala o introduce un nuevo código.
-
-`[server.scale] max = 1` evita repartir normalmente las salas entre instancias independientes. **No hay persistencia ni coordinación entre instancias**: un reinicio, despliegue o reemplazo pierde las salas. Incluso con ese máximo, Netlify puede solapar instancias durante reemplazos o despliegues; una invitación de la instancia anterior puede devolver `ROOM_NOT_FOUND`. No se ha añadido una base de datos para ocultar esta limitación.
-
-### Pruebas de la fase 3A
-
-```sh
-npm run check
-npm test
-# En una terminal:
-npx netlify dev --offline --no-open
-# En otra:
+npm run build
 npm run test:online
+npm run test:link
+npm run test:experience
+npm run test:admin
 ```
 
-`npm test` ejecuta 15 pruebas con `node:test`. `test:online` requiere Netlify Dev activo en localhost:8888, usa WebSockets nativos reales y permite otro origen mediante `SIGNAL_TEST_URL`. Respeta el limitador de intentos del servidor incluso entre casos de prueba.
+| Comando | Resultado local |
+| --- | --- |
+| `check` | Sintaxis correcta |
+| `test` | 38/38; hashes oficiales, seguridad, salas, negociación y dos builds idénticos |
+| `build` | 15 archivos permitidos en dist |
+| `test:online` | 8/8; WebSockets reales, aislamiento, cuotas y desconexión |
+| `test:link` | 8/8; cuatro diagnósticos MIT, 16 intercambios por ROM, IRQ/EWRAM, stalls, SHA/CRC y retorno individual |
+| `test:experience` | 7/7; 1x/2x, controles, foco/rotación, fullscreen, IndexedDB y build minificado |
+| `test:admin` | 4/4; SDK Blobs real local, texto/binarios, reinicios, revocación y navegador |
 
-Se verificaron: health/upgrade, dos clientes, crear/unirse, tercer cliente rechazado, señales aisladas, códigos inválidos, permisos, salida, cierre, desconexión, reconexión sin resucitar salas, mensajes binarios/grandes, ráfagas y cancelación de conexión. Los tests unitarios cubren además JSON malformado/profundo, cuotas por IP, receptores lentos y el hook de apagado.
+QA usa el Chrome instalado (`CHROME_PATH` opcional), perfiles aislados y evidencia en `artifacts/`. No instala navegador/framework. El Gamepad de QA es inyectado. Admin usa `@netlify/dev` ya transitivo de la CLI y un sandbox loopback propio con secretos efímeros y archivos legales generados; las unidades de seguridad sí usan mocks. Ninguna suite usa stores personales/cloud ni saves del usuario.
 
-En Chrome headless se usó la UI real para crear como host y unirse como invitado, se probaron vertical/horizontal y se mantuvo emulación individual real con la ROM diagnóstica propia. También se provocó una recarga real del servidor: cambió `instanceId`, el navegador descartó su sala y se reconectó sin reiniciar el Canvas ni el motor. Sin errores de JavaScript ni CSP. Evidencia local: `artifacts/phase3-browser-results.json` y capturas `phase3-*.png`.
+Build: **1.181.933 → 1.139.552 B**, gzip estimado **373.760 B**, Brotli estimado **289.532 B**. esbuild transforma solo JS/CSS propios, sin bundle ni sourcemaps; conserva fuente legible, rutas, núcleo y licencias. No incluye tests, referencias, archivos privados ni variables del entorno. Núcleo diferido hasta cargar ROM; no se solicitan APIs privadas en la primera visita pública. HTTP revalida rutas estables, sin service worker ni `immutable`; conserva CSP WASM/WebSocket y MIME `application/wasm`.
 
-En Windows, Netlify CLI puede detener el proceso sin ejecutar `SIGTERM`; por eso el apagado elegante se comprueba con `node:test`, y la recuperación abrupta se verificó además con un reinicio real. No se afirma haber probado el hook en producción.
+Chrome local, cinco cargas del build con caché HTTP vaciada: documento **54,7–219,3 ms**, mediana **163,5 ms**; solicitud de arranque a frame diagnóstico **35,6–522,3 ms**, mediana **37,9 ms** (la primera incluye compilación fría). No son mediciones de red móvil/CDN. Una comparación histórica empeoró de 163 a 233 ms pese a reducir bytes; no se afirma que minificar mejore automáticamente la carga. Este cierre no añade optimizaciones funcionales.
 
-### Dependencias y despliegue
+Auditoría npm: **0 vulnerabilidades de producción**; árbol de desarrollo con **15 avisos (13 moderados, 2 bajos)** en dependencias de la CLI. No se aplica `audit fix --force`: propone degradar Netlify CLI a una versión incompatible con Server. Pendiente actualización compatible del proveedor.
 
-- Runtime: `@netlify/server@0.1.6`, para el upgrade WebSocket y lifecycle oficiales. Su dependencia interna `ws` pertenece al SDK; la aplicación no incorpora otro servidor WebSocket ni usa Express o Socket.IO.
-- Desarrollo: `netlify-cli@27.19.0`, instalado localmente. `npm ci` reproduce `package-lock.json`.
-- No se reinstaló Node ni se instalaron herramientas globales. Las verificaciones usaron un perfil de CLI aislado en `artifacts/netlify-profile` mediante variables de entorno del proceso, sin cambiar configuración del usuario.
-- `npm audit --omit=dev`: 0 vulnerabilidades. La CLI trae 15 avisos transitivos de desarrollo (2 bajos, 13 moderados). El remedio propuesto por npm para varios implica degradar a una CLI antigua incompatible con Netlify Server; no se aplicó `audit fix --force` ni overrides sin verificar.
+## Licencias y procedencia
 
-Netlify sirve `public/` y enruta `/api/*` al handler de `netlify/server/index.mjs`. El frontend estático conserva su servidor de desarrollo. Se declara Node 24 y una sola instancia desde `netlify.toml`; CSP permite el WebSocket seguro y el endpoint local. No se necesita un backend externo ni compilar el motor en producción.
+[Dingbat](https://github.com/mattrbeck/dingbat), Matthew Beck, MIT, fijado en `91709f81223ee6a8be61e251466a7d748141d458`. `public/core/em.js` y `em.wasm` oficiales permanecen intactos; hashes/procedencia y avisos en [core/README](public/core/README.md), [LICENSE](public/core/LICENSE) y [THIRD_PARTY_NOTICES](public/core/THIRD_PARTY_NOTICES.md). El hash de JS se verifica con LF canónico para tolerar CRLF de Git.
 
-APIs contrastadas con la documentación oficial: [Netlify Server](https://docs.netlify.com/build/server/), [API y upgradeWebSocket](https://docs.netlify.com/build/server/api/), [configuración](https://docs.netlify.com/build/server/configuration/), [desarrollo local](https://docs.netlify.com/build/server/local-development/) y [lifecycle](https://docs.netlify.com/build/server/lifecycle/).
+Los cuatro [diagnósticos Link originales](tests/fixtures/link/README.md) conservan hashes y [licencia MIT](tests/fixtures/link/LICENSE). El harness carga esos programas sin cabecera en MEMFS aislado; la validación de producción no se debilita. No se incluyen ROMs comerciales ni BIOS. Proyecto independiente, sin afiliación con Nintendo, Game Freak o The Pokémon Company.
 
-Pendiente: publicar esta rama por el flujo habitual del usuario y verificar `/api/health` y dos navegadores en producción. Netlify Server está en Early Access y requiere un plan compatible; que el frontend estático ya esté publicado no confirma por sí solo esa disponibilidad. No se hizo deploy, commit ni push. No se avanzó a WebRTC ni al cable Link.
+## Preparar Deploy Preview y actualizar PR #1
+
+`netlify.toml`: Node 24, build `npm run build`, publicación `dist/`, Server `/api/*`, escala máxima 1. No hay rewrite SPA que oculte la API. Las salas son efímeras: reinicios/despliegues pierden membresías; instancias solapadas durante reemplazos pueden devolver `ROOM_NOT_FOUND` incluso con ese máximo. Netlify Server está en Early Access.
+
+1. Revisar `git branch --show-current`, `git status --short`, `git diff --check` y `git diff`; debe mantenerse `feat/online-pvp`. Inspeccionar también los archivos nuevos. No incluir `.env*`, `game_test/`, ROMs/saves personales ni `artifacts/`.
+2. El trabajo de las fases A/B sigue pendiente de commit, incluidos módulos/tests nuevos: conservarlo completo. Tras revisión, **el usuario** puede preparar estos archivos públicos:
+   ```sh
+   git add .gitignore AGENTS.md README.md package.json package-lock.json netlify.toml public netlify/server scripts tests docs
+   git diff --cached --check
+   git diff --cached --stat
+   git diff --cached
+   git commit -m "chore: prepare Emerald PvP 1.0.0-rc.1"
+   git push origin feat/online-pvp
+   ```
+3. Ese push actualizará el [PR #1 existente](https://github.com/bobyDeveloper/Pokemon-esmeralda-pvp-emulator/pull/1) si su head sigue siendo esta rama del repositorio; comprobar base `main` y head antes. No crear otro PR, tag, force-push ni merge. Título sugerido: **Emerald PvP 1.0.0-rc.1: experiencia, Link y Admin Test privado**. Descripción: resumir A/B, resultados de la tabla y validaciones pendientes.
+4. Configurar las cuatro variables de preview, manteniendo Admin desactivado en producción. Revisar el Deploy Preview del PR tras el push autorizado; comprobar frontend, `/api/health`, salas de dos clientes, WASM/CSP y diagnóstico `health.txt` antes de usar archivos privados.
+
+**Pendiente antes de declarar v1.0.0 final:** Safari iPhone, Android físicos, audio/safe areas, suspensión/reanudación móvil, Gamepad físico, NAT distintos, cookies HTTPS/Blobs remoto y latencia/streams/CDN reales. Para el combate: usar dos ROMs locales con SHA-256 idéntico y saves propios con acceso al Club Cable, conectar sala y cable en ambos, completar un combate, salir normalmente y comprobar exportación/recarga de cada save. Los diagnósticos no sustituyen esa prueba.
+
+No se ejecutaron commits, pushes, tags, subidas cloud ni despliegues durante la auditoría.

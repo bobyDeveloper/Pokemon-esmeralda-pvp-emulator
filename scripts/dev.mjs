@@ -2,9 +2,11 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
-const publicDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '../public');
-const port = Number(process.env.PORT ?? 5173);
+const preview = process.argv.includes('--dist');
+const publicDirectory = resolve(dirname(fileURLToPath(import.meta.url)), preview ? '../dist' : '../public');
+const port = Number(process.env.PORT ?? (preview ? 4173 : 5173));
 const host = process.env.HOST ?? '127.0.0.1';
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -39,10 +41,16 @@ const server = createServer(async (request, response) => {
       return;
     }
     const body = await readFile(file);
+    const etag = `"${createHash('sha256').update(body).digest('hex')}"`;
+    if (preview && request.headers['if-none-match'] === etag) {
+      response.writeHead(304, { ETag: etag, 'Cache-Control': 'public, max-age=0, must-revalidate' }).end();
+      return;
+    }
     response.writeHead(200, {
       'Content-Type': mimeTypes[extname(file)] ?? 'application/octet-stream',
       'Content-Length': body.length,
-      'Cache-Control': 'no-store',
+      'Cache-Control': preview ? 'public, max-age=0, must-revalidate' : 'no-store',
+      ...(preview ? { ETag: etag } : {}),
       'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'self'; connect-src 'self' wss: ws://localhost:8888 ws://127.0.0.1:8888; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     });

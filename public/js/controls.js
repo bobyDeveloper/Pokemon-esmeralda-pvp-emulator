@@ -21,6 +21,9 @@ export function createControls(root) {
   const pressed = new Set();
   const abortController = new AbortController();
   const { signal } = abortController;
+  let gamepadFrame;
+  let gamepadNeedsNeutral = false;
+  let focused = document.hasFocus();
 
   function updateButton(button) {
     if (!button) return;
@@ -54,6 +57,7 @@ export function createControls(root) {
   }
 
   function releaseAll() {
+    gamepadNeedsNeutral = true;
     for (const timer of accessibleTimers) clearTimeout(timer);
     accessibleTimers.clear();
     sources.clear();
@@ -85,6 +89,11 @@ export function createControls(root) {
 
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     root.addEventListener(type, event => releasePointer(event.pointerId), { signal });
+  }
+  // Capture can be lost or fail on an interrupted mobile gesture. Window is
+  // the final release boundary, even when pointerup targets outside the shell.
+  for (const type of ['pointerup', 'pointercancel']) {
+    window.addEventListener(type, event => releasePointer(event.pointerId), { signal, capture: true });
   }
 
   function inputIsBlocked(event) {
@@ -128,17 +137,49 @@ export function createControls(root) {
   }, { signal });
 
   root.addEventListener('contextmenu', event => event.preventDefault(), { signal });
-  window.addEventListener('blur', releaseAll, { signal });
+  window.addEventListener('blur', () => { focused = false; releaseAll(); }, { signal });
+  window.addEventListener('focus', () => { focused = true; }, { signal });
   window.addEventListener('pagehide', releaseAll, { signal });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) releaseAll();
   }, { signal });
+
+  function pollGamepads() {
+    gamepadFrame = null;
+    let pads;
+    try { pads = [...(navigator.getGamepads?.() ?? [])].filter(pad => pad?.connected && pad.mapping === 'standard'); }
+    catch { return; }
+    const mapping = { 0: 'A', 1: 'B', 4: 'L', 5: 'R', 8: 'SELECT', 9: 'START', 12: 'UP', 13: 'DOWN', 14: 'LEFT', 15: 'RIGHT' };
+    const next = new Map();
+    for (const pad of pads) {
+      for (const [index, button] of Object.entries(mapping)) {
+        if (pad.buttons[index]?.pressed || pad.buttons[index]?.value > 0.5) next.set(`gamepad:${pad.index}:button:${index}`, button);
+      }
+      for (const [axis, negative, positive] of [[0, 'LEFT', 'RIGHT'], [1, 'UP', 'DOWN']]) {
+        const source = `gamepad:${pad.index}:axis:${axis}`;
+        const value = pad.axes[axis] ?? 0;
+        const threshold = sources.has(source) ? 0.35 : 0.55;
+        if (Math.abs(value) > threshold) next.set(source, value < 0 ? negative : positive);
+      }
+    }
+    if (!focused || document.hidden || document.querySelector('dialog[open]')) gamepadNeedsNeutral = true;
+    if (!next.size) gamepadNeedsNeutral = false;
+    if (gamepadNeedsNeutral || !focused || document.hidden || document.querySelector('dialog[open]')) next.clear();
+    for (const source of [...sources.keys()]) if (source.startsWith('gamepad:') && !next.has(source)) setSource(source);
+    for (const [source, button] of next) setSource(source, button);
+    if (pads.length) gamepadFrame = requestAnimationFrame(pollGamepads);
+  }
+  function startGamepads() { if (gamepadFrame == null) gamepadFrame = requestAnimationFrame(pollGamepads); }
+  window.addEventListener('gamepadconnected', startGamepads, { signal });
+  window.addEventListener('gamepaddisconnected', startGamepads, { signal });
+  startGamepads();
 
   return {
     getPressedButtons: () => [...pressed],
     releaseAll,
     destroy() {
       releaseAll();
+      cancelAnimationFrame(gamepadFrame);
       abortController.abort();
     },
   };

@@ -8,6 +8,12 @@
     <title>Emerald PVP · La consola</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2385e5b5' d='m16 2 13 10-13 18L3 12Z'/%3E%3Cpath fill='%233b9276' d='M3 12h26L16 30Z'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/style.css">
+    <link rel="modulepreload" href="/js/controls.js">
+    <link rel="modulepreload" href="/js/emulator.js">
+    <link rel="modulepreload" href="/js/storage.js">
+    <link rel="modulepreload" href="/js/multiplayer.js">
+    <link rel="modulepreload" href="/js/link.js">
+    <link rel="modulepreload" href="/js/immersive.js">
     <script type="module" src="/js/main.js"></script>
   </head>
   <body>
@@ -22,6 +28,8 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6l2 3h8v12H4ZM4 12h16M12 11v6m-3-3 3 3 3-3"/></svg><span>Cargar ROM</span>
         </button>
         <button class="session-toggle" id="session-toggle" type="button" aria-label="Abrir opciones del juego" aria-haspopup="dialog" aria-controls="session-panel">···</button>
+        <button class="icon-action" id="fast-forward" type="button" aria-label="Activar avance rápido 2x" aria-pressed="false" title="Avance rápido 2x · sin sonido" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 9 7-9 7Zm10 0 9 7-9 7Z"/></svg><span class="speed-label">1×</span></button>
+        <button class="icon-action" id="immersive-toggle" type="button" aria-label="Pantalla completa / modo inmersivo" aria-pressed="false" title="Pantalla completa / modo inmersivo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button>
       </div>
       <button class="help-toggle" type="button" aria-label="Abrir guía de controles" aria-haspopup="dialog" aria-controls="controls-help">?</button>
     </header>
@@ -120,12 +128,14 @@
 
     <dialog class="controls-help session-panel" id="session-panel" aria-labelledby="session-title">
       <form method="dialog"><button class="dialog-close" aria-label="Cerrar opciones" autofocus>×</button></form>
+      <button type="button" id="admin-open" class="admin-toggle" aria-label="Admin Test privado" aria-haspopup="dialog" aria-controls="admin-panel" title="Admin Test privado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5Zm7 4v3"/></svg></button>
       <span class="dialog-kicker">EMERALD PVP · DINGBAT</span>
       <h2 id="session-title">Tu partida.</h2>
       <p class="rom-name" id="rom-name">Ninguna ROM cargada</p>
       <p class="session-status" id="session-status" role="status">Carga una ROM .gba para comenzar.</p>
       <p class="session-message" id="session-message" role="status" hidden></p>
       <div class="session-grid">
+        <button type="button" id="continue-rom" class="room-opener" hidden>Continuar ROM local</button>
         <button type="button" id="pause-game" disabled>Pausar</button>
         <button type="button" id="reset-game" disabled>Reiniciar</button>
         <button type="button" id="import-save" disabled>Importar .sav</button>
@@ -133,6 +143,8 @@
         <button type="button" id="open-room" class="room-opener">Salas</button>
       </div>
       <label class="sound-option"><input type="checkbox" id="sound-enabled" checked> Sonido activado</label>
+      <label class="sound-option remember-option"><input type="checkbox" id="remember-rom"> Recordar acceso a esta ROM local</label>
+      <p class="help-note" id="rom-access-note">Opcional. No se copia ni se sube la ROM. Algunos navegadores requieren volver a seleccionarla al continuar.</p>
       <p class="save-status" id="save-status">Las partidas se guardan automáticamente en este navegador.</p>
       <p class="help-note">La ROM y las partidas permanecen en tu dispositivo. Importa partidas del juego cargado y exporta copias para conservarlas fuera del navegador.</p>
       <a class="core-credits" href="/core/README.md" target="_blank" rel="noopener">Dingbat · Matthew Beck · Licencia MIT ↗</a>
@@ -156,6 +168,24 @@
         <div class="session-grid"><button type="button" id="leave-room">Abandonar</button><button type="button" id="close-room">Cerrar sala</button></div>
       </section>
       <p class="help-note" id="room-note">La sala admite dos personas. Por ahora, el juego continúa en modo individual; la conexión entre juegos todavía no está disponible.</p>
+    </dialog>
+
+    <dialog class="controls-help session-panel" id="admin-panel" aria-labelledby="admin-title">
+      <form method="dialog"><button class="dialog-close" aria-label="Cerrar Admin Test">×</button></form>
+      <span class="dialog-kicker">EMERALD PVP · PRIVADO</span>
+      <h2 id="admin-title">Admin Test</h2>
+      <p id="admin-status" role="status" aria-live="polite">Acceso privado a archivos de prueba. Tu progreso se conserva en este dispositivo.</p>
+      <form id="admin-login">
+        <label class="admin-label" for="admin-password">Contraseña</label>
+        <input id="admin-password" type="password" autocomplete="current-password" required maxlength="1024">
+        <div class="session-grid"><button type="submit" class="room-opener">Entrar y abrir prueba</button></div>
+      </form>
+      <div class="session-grid">
+        <button type="button" id="admin-load" hidden>Cargar prueba</button>
+        <button type="button" id="admin-logout" hidden>Cerrar sesión</button>
+        <button type="button" id="admin-health" class="room-opener" hidden>Verificar diagnóstico</button>
+      </div>
+      <p class="help-note">Los archivos de prueba son privados. Una partida local existente tiene prioridad sobre la plantilla; cerrar sesión revoca el acceso a nuevas descargas.</p>
     </dialog>
 
     <input id="rom-file" type="file" accept=".gba,application/octet-stream" hidden>
